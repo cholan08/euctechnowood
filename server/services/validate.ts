@@ -8,8 +8,8 @@ import {
   appliesTo,
   type CatalogOption,
   type StylePreset,
-} from '../shared/catalog';
-import type { RedesignRequest } from '../shared/types';
+} from '../../shared/catalog';
+import type { RedesignRequest } from '../../shared/types';
 
 /** A problem with what the browser sent; its message is safe to show the user. */
 export class RequestError extends Error {}

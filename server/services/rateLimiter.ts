@@ -1,10 +1,9 @@
 /**
- * Every generated image costs money, so a public upload page needs a limit.
- * This in-memory sliding window counts images per key (visitor IP for now).
- * It resets when the server restarts and is per-process; replace it with
- * per-account quotas in a database once there are logins.
+ * A sliding-window limiter, in memory and per process (it resets on restart).
+ * Used for generated images (each one costs money), lead submissions and admin
+ * logins. Replace with a shared store (Redis) if the app runs on several servers.
  */
-export class ImageQuota {
+export class RateLimiter {
   private readonly hits = new Map<string, number[]>();
 
   constructor(
@@ -12,8 +11,8 @@ export class ImageQuota {
     private readonly windowMs: number,
   ) {}
 
-  /** Reserves `count` images for `key`. Returns false (and reserves nothing) if over the limit. */
-  take(key: string, count: number): boolean {
+  /** Reserves `count` units for `key`. Returns false (and reserves nothing) if over the limit. */
+  take(key: string, count = 1): boolean {
     const now = Date.now();
     const recent = (this.hits.get(key) ?? []).filter((t) => now - t < this.windowMs);
     if (recent.length + count > this.max) {

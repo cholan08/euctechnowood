@@ -19,6 +19,8 @@ export type RoomTypeId = (typeof ROOM_TYPES)[number]['id'];
 export interface StylePreset {
   id: string;
   label: string;
+  /** One line shown to the customer on the style card. */
+  blurb: string;
   prompt: string;
 }
 
@@ -26,48 +28,56 @@ export interface StylePreset {
 export const STYLES: StylePreset[] = [
   {
     id: 'modern',
+    blurb: 'Clean lines, handleless shutters',
     label: 'Modern',
     prompt:
       'modern: handleless flat shutters, clean lines, a neutral palette with one muted accent colour, slim black or brushed-metal fittings',
   },
   {
     id: 'indian-contemporary',
+    blurb: 'Warm teak, brass and texture',
     label: 'Indian contemporary',
     prompt:
       'Indian contemporary: warm teak or walnut wood, brass accents, textured off-white walls, cane or jaali details used sparingly, warm lighting',
   },
   {
     id: 'minimal',
+    blurb: 'Calm, clutter-free, hidden storage',
     label: 'Minimal',
     prompt:
       'minimal: very few objects, white and soft grey surfaces, hidden storage, clear counters and shelves, calm and airy',
   },
   {
     id: 'scandinavian',
+    blurb: 'Light oak, white and airy',
     label: 'Scandinavian',
     prompt:
       'Scandinavian: light oak wood, white walls, soft textiles, rounded furniture, a few plants, bright daylight feel',
   },
   {
     id: 'japandi',
+    blurb: 'Low, natural, quiet palette',
     label: 'Japandi',
     prompt:
       'Japandi: low furniture, light natural wood, beige and charcoal palette, linen textures, simple ceramics',
   },
   {
     id: 'luxury',
+    blurb: 'High-gloss, marble look, gold accents',
     label: 'Luxury',
     prompt:
       'luxury: lacquered or high-gloss shutters, marble-look surfaces, champagne-gold metal accents, layered cove and accent lighting',
   },
   {
     id: 'industrial',
+    blurb: 'Dark wood, black metal, brick',
     label: 'Industrial',
     prompt:
       'industrial: one exposed-brick or concrete-look accent wall, black metal frames, dark wood, filament pendant lights',
   },
   {
     id: 'classic-wood',
+    blurb: 'Rich panelled wood, brass handles',
     label: 'Classic wooden',
     prompt:
       'classic wooden: rich wood shutters with simple raised panels, restrained carved accents, warm cream walls, brass handles',

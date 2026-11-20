@@ -1,10 +1,12 @@
-import type { StylePreset } from '../shared/catalog';
+import type { StylePreset } from '../../shared/catalog';
 import type { ParsedRequest } from './validate';
 
 export interface Job {
   label: string;
   styleId: string | null;
   prompt: string;
+  /** Plain-language list of what the customer chose, shown to the sales team. */
+  summary: string;
 }
 
 // Guardrails that apply to every generation. Most quality problems (moved
@@ -26,7 +28,19 @@ export function buildJobs(request: ParsedRequest): Job[] {
     label: style?.label ?? (request.source === 'render' ? 'Photoreal render' : 'Your changes'),
     styleId: style?.id ?? null,
     prompt: composePrompt(request, style),
+    summary: summarize(request, style),
   }));
+}
+
+function summarize(request: ParsedRequest, style: StylePreset | null): string {
+  const parts = [
+    request.room.label,
+    style ? `${style.label} style` : '',
+    ...request.changes.map((c) => c.label),
+    ...request.extras.map((e) => e.label),
+    request.notes ? `Note: ${request.notes}` : '',
+  ];
+  return parts.filter(Boolean).join(' · ');
 }
 
 function composePrompt(request: ParsedRequest, style: StylePreset | null): string {

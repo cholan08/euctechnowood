@@ -40,11 +40,10 @@ export async function prepareImage(file: File): Promise<PreparedImage> {
   return { dataUrl: canvas.toDataURL('image/jpeg', 0.9), width, height, name: file.name };
 }
 
-export function measureImage(src: string): Promise<{ width: number; height: number }> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
-    img.onerror = () => reject(new Error('Could not read the generated image.'));
-    img.src = src;
-  });
+/** Downloads a generated design so it can become the starting photo of the next edit. */
+export async function fileFromUrl(url: string, name: string): Promise<File> {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('Could not load the generated image.');
+  const blob = await response.blob();
+  return new File([blob], name, { type: blob.type || 'image/jpeg' });
 }

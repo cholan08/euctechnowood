@@ -1,5 +1,6 @@
 import { createGeminiProvider } from './gemini';
 import type { ImageEditProvider } from './types';
+import { createXaiProvider } from './xai';
 
 /** Mock: returns the uploaded photo unchanged after a short delay. For UI work without an API key. */
 const mockProvider: ImageEditProvider = {
@@ -10,12 +11,17 @@ const mockProvider: ImageEditProvider = {
   },
 };
 
-/** Reads the environment when called, so call it after .env is loaded. */
+/** Reads the environment when called, so call it after config has loaded .env. */
 export function getProvider(): ImageEditProvider {
   const env = process.env;
-  const name = (env.IMAGE_PROVIDER || (env.GEMINI_API_KEY ? 'gemini' : 'mock')).toLowerCase();
+  const fallback = env.XAI_API_KEY ? 'xai' : env.GEMINI_API_KEY ? 'gemini' : 'mock';
+  const name = (env.IMAGE_PROVIDER || fallback).toLowerCase();
 
   switch (name) {
+    case 'xai': {
+      if (!env.XAI_API_KEY) throw new Error('IMAGE_PROVIDER=xai needs XAI_API_KEY in .env');
+      return createXaiProvider({ apiKey: env.XAI_API_KEY, model: env.XAI_IMAGE_MODEL || 'grok-imagine-image-2.0' });
+    }
     case 'gemini': {
       if (!env.GEMINI_API_KEY) throw new Error('IMAGE_PROVIDER=gemini needs GEMINI_API_KEY in .env');
       return createGeminiProvider({
@@ -28,6 +34,6 @@ export function getProvider(): ImageEditProvider {
     case 'mock':
       return mockProvider;
     default:
-      throw new Error(`Unknown IMAGE_PROVIDER "${name}". Use "gemini" or "mock".`);
+      throw new Error(`Unknown IMAGE_PROVIDER "${name}". Use "xai", "gemini" or "mock".`);
   }
 }

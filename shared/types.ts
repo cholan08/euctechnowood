@@ -18,11 +18,13 @@ export interface RedesignRequest {
 }
 
 export interface Variation {
+  /** Set when the design was saved; needed to request a quote for it. */
+  id?: string;
   label: string;
   styleId: string | null;
   /** The exact prompt sent to the AI, shown in the UI so the team can tune it. */
   prompt: string;
-  /** The generated image as a data URL, when it succeeded. */
+  /** URL of the generated image, when it succeeded. */
   image?: string;
   error?: string;
   ms: number;
@@ -31,4 +33,35 @@ export interface Variation {
 export interface RedesignResponse {
   provider: string;
   variations: Variation[];
+}
+
+/** POST /api/leads */
+export interface QuoteRequest {
+  designId: string;
+  name: string;
+  phone: string;
+  email: string;
+  city: string;
+  message: string;
+}
+
+export type LeadStatus = 'new' | 'contacted' | 'won' | 'lost';
+export const LEAD_STATUSES: LeadStatus[] = ['new', 'contacted', 'won', 'lost'];
+
+export interface AdminLead {
+  id: number;
+  name: string;
+  phone: string;
+  email: string;
+  city: string;
+  message: string;
+  status: LeadStatus;
+  createdAt: string;
+  design: {
+    label: string;
+    roomType: string;
+    summary: string;
+    beforeUrl: string;
+    afterUrl: string;
+  } | null;
 }

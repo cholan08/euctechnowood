@@ -1,72 +1,67 @@
-# Room Studio (proof of concept)
+# EUC Technowood Room Studio (MVP)
 
-A customer uploads a photo of a room (kitchen, hall, bedroom…), picks styles and changes
-(wall colour, shutters, countertop, flooring, ceiling, furniture, extras), and gets several
-AI-redesigned versions of **the same room** to compare side by side.
+A customer uploads a photo of a room, picks styles and changes (wall colour, shutters, countertop,
+flooring, furniture…) and gets AI-redesigned versions of **the same room** with a before/after slider.
+They can then **request a quote** for a design. The team sees every request, with the design attached, in `/admin`.
 
-It also accepts a **Cabinet Vision 3D render** and turns it into a photoreal image
-(the idea from the "Render Enhancer" prototype), using the same pipeline.
+It also accepts a **Cabinet Vision 3D render** and turns it into a photoreal image.
 
-This is a proof of concept for EUC Technowood. Its main job is to test, on real customer
-photos, whether the AI output is good enough before we build the full platform.
-
-## Quick start
+## Run it
 
 ```bash
 npm install
-cp .env.example .env      # add GEMINI_API_KEY, or leave it empty for mock mode
-npm run dev               # UI: http://localhost:5173  ·  API: http://localhost:8787
+cp .env.example .env     # add XAI_API_KEY (or GEMINI_API_KEY); empty = mock mode
+npm run dev              # UI http://localhost:5173 · API http://localhost:8787
 ```
 
-Without a key the app runs in **mock mode**: everything works, but each "design" is your
-photo unchanged. That is enough for UI work.
+Production-style: `npm run build && npm start` (one server on port 8787 serves UI + API).
+In production `ADMIN_PASSWORD` and `SESSION_SECRET` are required.
 
-Production-style run: `npm run build && npm start`. One server on port 8787 serves both
-the UI and the API.
+Without an AI key the app runs in **mock mode** (each design is your photo unchanged), which is enough for UI work.
+Open the studio with `?debug` to see the prompt sent to the AI on each result.
 
-## How it works
+## Folder structure
 
 ```
-Browser (React)                         Server (Express)                     AI image model
-─────────────────                       ────────────────                     ──────────────
-1. shrink photo to 1536px JPEG   ──►    2. validate ids against catalogue
-   + room type, styles, changes         3. build one prompt per style   ──►  4. edit the photo
-                                        5. run all styles in parallel   ◄──     (Gemini today)
-6. before/after slider, download  ◄──      per-IP hourly image limit
+shared/            Code used by both sides
+  catalog.ts         All design options (rooms, styles, finishes) and their prompt text
+  types.ts           Request / response types
+server/
+  index.ts           Starts the server
+  app.ts             Builds the Express app (routes, static files)
+  config.ts          Reads .env once
+  routes/            redesign.ts · leads.ts · admin.ts   (HTTP only)
+  services/          prompt.ts (AI prompt + guardrails) · validate.ts · rateLimiter.ts · imageStore.ts
+  providers/         One adapter per AI service: xai.ts · gemini.ts · mock (index.ts)
+  db/                SQLite: database.ts (schema) · designs.ts · leads.ts
+  middleware/        adminAuth.ts (signed cookie login)
+src/
+  main.tsx · App.tsx   Entry and routes ( / and /admin )
+  pages/               StudioPage.tsx · AdminPage.tsx
+  components/          layout/ · studio/ · ui/
+  api/                 fetch wrappers for the server
+  lib/                 image resizing
+  styles/              tokens.css (brand colours) · base · layout · studio · admin
+data/                Created at runtime (git-ignored): euc.db and uploads/ (generated images)
 ```
 
-| Path | What it does |
-| --- | --- |
-| `shared/catalog.ts` | **All design options** (rooms, styles, wall colours, finishes…) and the prompt text for each. Edit this file to add or reword options. |
-| `server/prompt.ts` | Turns a request into the AI prompt, plus the guardrails ("keep the windows", "nothing floating"…). Most quality tuning happens here. |
-| `server/providers/` | One adapter per AI service behind a common interface. `gemini.ts` is real; `index.ts` also has the mock. |
-| `server/validate.ts` | Request checks. Only catalogue ids reach the prompt; free text is capped at 300 characters. |
-| `server/quota.ts` | Images per visitor per hour, because every image costs money. |
-| `src/` | The React UI: uploader, design panel, results with before/after slider. |
+## AI providers
 
-Each result card has a **"Prompt sent to the AI"** section. Use it while tuning prompts.
+`IMAGE_PROVIDER` = `xai`, `gemini` or `mock` (auto-picked from whichever key is set).
+**xAI**: use model `grok-imagine-image-2.0`. The `grok-4.x` models are chat models and cannot generate images.
+To add another service, create `server/providers/<name>.ts` implementing `ImageEditProvider` and register it in `providers/index.ts`.
 
-## Adding another AI service
+## Known limits
 
-Create `server/providers/<name>.ts` that implements `ImageEditProvider` (`edit(input) → { mimeType, base64 }`),
-register it in `server/providers/index.ts`, and set `IMAGE_PROVIDER=<name>`. Good candidates to compare
-quality against Gemini: OpenAI's image edits API, FLUX Kontext (via fal.ai or Replicate), and
-open models such as Qwen-Image-Edit.
-
-## Known limits of this POC
-
-- No accounts, no saved projects, no database. Results live only in the browser tab.
-- Images travel as base64 JSON. Fine for testing; production should upload to object storage (S3/R2) and pass URLs.
-- The hourly limit is in memory and keyed by IP. Behind a proxy, set Express `trust proxy`.
+- Single server, SQLite and local disk. For scale: Postgres + S3/R2 (only `server/db` and `services/imageStore.ts` change).
+- No customer accounts or OTP yet; quotes are captured with name + mobile number.
+- Rate limits are in memory, per IP.
 - AI output is a **concept image**: not to scale, not a quote, not a buildable design.
 
-## Suggested next steps
+## Roadmap
 
-1. **Quality test (now):** collect 30–50 real customer photos (kitchens, halls, bedrooms, good and bad lighting).
-   Run them through 2–3 models and score whether the room structure is kept, whether the changes were applied, and whether it looks realistic.
-2. **MVP:** phone-OTP login, saved projects, a "Get a quote for this design" lead form, admin view of leads,
-   image storage, per-account quotas, and usage and cost tracking.
-3. **Precise edits:** tap a wall, cabinet or floor to change only that area (segmentation mask + inpainting).
-4. **Real catalogue:** each manufacturer uploads their actual laminates and finishes as swatch images;
-   the model uses them as reference images, so customers see real, orderable products.
-5. **White-label:** one portal per manufacturer (their logo, catalogue, leads), managed by EUC.
+1. Quality test on 30–50 real customer photos across models.
+2. Phone-OTP login, saved projects, WhatsApp/email alerts on new leads, cost tracking.
+3. Tap-to-edit regions (segmentation + inpainting).
+4. Real catalogue: manufacturers upload laminates/finishes as reference swatches.
+5. White-label portals per manufacturer.

@@ -1,15 +1,16 @@
-import { useEffect, useState } from 'react';
-import type { PreparedImage } from '../image';
+import { useEffect, useState, type ReactNode } from 'react';
 
 interface Props {
-  photo: PreparedImage | null;
   onFile: (file: File) => void;
+  className?: string;
+  children: ReactNode;
 }
 
-export function Uploader({ photo, onFile }: Props) {
+/** A label that opens the file picker on click and accepts a dropped image. */
+export function FileDrop({ onFile, className = '', children }: Props) {
   const [over, setOver] = useState(false);
 
-  // Stop the browser from opening a file that is dropped outside the drop zone.
+  // Stop the browser from opening a file that is dropped outside a drop zone.
   useEffect(() => {
     const stop = (e: DragEvent) => e.preventDefault();
     window.addEventListener('dragover', stop);
@@ -22,7 +23,7 @@ export function Uploader({ photo, onFile }: Props) {
 
   return (
     <label
-      className={`drop${over ? ' over' : ''}`}
+      className={`${className}${over ? ' over' : ''}`}
       onDragOver={(e) => {
         e.preventDefault();
         setOver(true);
@@ -46,17 +47,7 @@ export function Uploader({ photo, onFile }: Props) {
           e.target.value = ''; // allow choosing the same file again
         }}
       />
-      {photo ? (
-        <>
-          <img src={photo.dataUrl} alt="Your uploaded room" />
-          <span>Click or drop to replace</span>
-        </>
-      ) : (
-        <>
-          <strong>Upload a room photo</strong>
-          <span>Drag a JPG or PNG here, or click to choose one.</span>
-        </>
-      )}
+      {children}
     </label>
   );
 }
