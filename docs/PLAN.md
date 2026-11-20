@@ -1,265 +1,198 @@
-# EUC Room Studio: Product Build Plan
+# EUC Room Studio: Build and Deployment Plan
 
-Written: 20 Nov 2026. Starting point: the working MVP in this repo (studio, quote leads, admin, xAI + Gemini providers, 74 passing UI checks).
+Updated: 20 Nov 2026. Starting point: the working MVP in this repo (one-screen studio, xAI + Gemini providers, 74 passing UI checks).
 
 ---
 
 ## 1. What we are building
 
-**One sentence:** a white-label AI design studio that EUC Technowood sells to furniture and modular-kitchen manufacturers. Their customers upload a room photo (or the manufacturer uploads a Cabinet Vision render), see it redesigned with **that manufacturer's real finishes**, and send a quote request straight to the manufacturer's sales team.
+An **internal design tool for EUC Technowood's staff**. During EUC's paid design process (the customer pays a design amount before the project starts), a staff member uploads the customer's room photo or a Cabinet Vision render. They try styles and finishes, compare before and after, and **download** the designs to share with the customer.
 
-### Who uses it
+**Scope decisions (agreed):**
 
-| User | What they do | Where |
-| --- | --- | --- |
-| **Homeowner** (end customer) | Upload a room photo, try styles and finishes, save designs, request a quote, share on WhatsApp | Manufacturer's studio page (phone first) |
-| **Manufacturer sales team** | Get leads with the design attached, call or WhatsApp them, track status | Manufacturer portal |
-| **Manufacturer admin** | Branding, catalogue (laminates, finishes, handles), team members, usage, billing | Manufacturer portal |
-| **Cabinet Vision designer** (at the manufacturer) | Turn CV renders into photoreal images for their clients | Manufacturer portal |
-| **EUC super-admin** | Onboard manufacturers, set plans and credits, watch usage, AI cost and quality | EUC console |
-
-### How EUC makes money (to confirm with client)
-
-- A monthly plan per manufacturer, with an included number of AI images. Extra images are sold as credit packs.
-- It can be bundled as an add-on to Cabinet Vision licences EUC already sells.
-
----
-
-## 2. Where we are today (the MVP)
-
-**Keep and build on:**
-- `shared/catalog.ts`: options and prompt text. This becomes database rows per manufacturer.
-- `server/services/prompt.ts`: the prompt builder and guardrails, the core of AI quality.
-- `server/providers/*`: one provider interface with xAI (`grok-imagine-image-2.0`), Gemini and mock behind it.
-- The UI: landing page, one-screen studio, quote modal, admin leads list, brand tokens.
-- The end-to-end UI test, which becomes the Playwright suite.
-
-**Replace or add:**
-
-| MVP shortcut | Production version |
+| Topic | Decision |
 | --- | --- |
-| SQLite file | PostgreSQL |
-| Images on local disk | Object storage (Cloudflare R2 or S3) with signed URLs |
-| One 30–40 s HTTP request per generation | Job queue and worker, with live progress |
-| In-memory rate limits | Redis-backed limits and per-account credits |
-| One admin password | Accounts with roles, phone OTP for customers |
-| One brand, one catalogue | Multi-tenant: branding, catalogue and leads per manufacturer |
-| Hand-written validation | `zod` schemas shared by web and API |
+| Users | EUC staff only, behind a login. No public access. |
+| Billing | None in the app. EUC charges the design amount in their own process. |
+| Quote form / leads | Removed. Staff already know the customer. |
+| Images | **Not stored.** Image → AI → shown in the browser → downloaded. Nothing saved on the server. |
+| Database | Small: staff logins + a usage log (who made how many designs, when, AI cost). No images. |
+| Clients | One: EUC, on their own domain (for example `studio.<euc-domain>`). |
+| Hosting | One small VPS in India, running the frontend, backend and database together. |
+
+**What "no image storage" means for staff:** designs live only in the open browser tab. Closing or refreshing the page loses anything not downloaded. The studio warns before leaving with undownloaded designs.
 
 ---
 
-## 3. Target architecture
+## 2. What changes from the MVP
+
+| Keep as is | Remove | Add |
+| --- | --- | --- |
+| Studio UI (one screen, tabs, compare slider, thumbnails) | "Get a quote" form, leads admin, CSV of leads | Staff login with personal accounts |
+| `server/services/prompt.ts` and guardrails | `designs` / `leads` tables | Admin: manage staff, view usage and AI cost |
+| xAI + Gemini providers, mock mode | Saving images to disk, `/uploads` | Usage log per generation |
+| Brand styling, landing slider | Public landing page as a homepage (becomes the login page) | Per-user daily image limit |
+| UI test suite | | Deployment: Docker, HTTPS, backups |
+
+---
+
+## 3. Architecture
 
 ```
-                 ┌────────────── Cloudflare (DNS, CDN, R2 image storage) ──────────────┐
- Homeowner ──►  web (React SPA)  ──►  api (Express + zod)  ──►  PostgreSQL
- Staff     ──►  portal routes          │        ▲
-                                       ▼        │ status / progress (SSE)
-                                   Redis queue (BullMQ)
-                                       │
-                                       ▼
-                                  worker ──► AI providers (xAI, Gemini, …)
-                                       └──► R2 (save images) ──► WhatsApp / email alerts
+ Staff browser ──HTTPS──► Caddy (auto HTTPS, studio.<euc-domain>)
+                              │
+                              ▼
+                     Node app (one container)
+                     ├─ serves the React app
+                     ├─ /api/auth   login, logout, session
+                     ├─ /api/redesign  ──► xAI grok-imagine-image-2.0 (Gemini as fallback)
+                     │                   image returned to the browser, never saved
+                     ├─ /api/admin  staff and usage
+                     └─ SQLite file (users, sessions, usage log) on a Docker volume
+                              │
+                              └─ nightly backup of the SQLite file to off-server storage
 ```
 
-### Stack decisions
-
-Each choice keeps what already works and adds only what the product needs.
+### Stack
 
 | Area | Choice | Why |
 | --- | --- | --- |
-| Repo | pnpm workspaces monorepo: `apps/web`, `apps/api`, `apps/worker`, `packages/shared`, `packages/db` | Web, API and worker share types, catalogue and prompt code |
-| Frontend | React + Vite + React Router (as now), plus TanStack Query | Already built and tested; Query handles loading and caching |
-| API | Express 5 + TypeScript + zod | Already in use; zod replaces hand-written checks |
-| Database | PostgreSQL 16 + Drizzle ORM + migrations | Relational data (tenants, leads, credits); typed queries |
-| Queue | Redis + BullMQ | AI calls take 15–40 s; we need retries, concurrency limits (xAI image model: 6 req/s, 300/min) and progress |
-| Images | Cloudflare R2 (S3 API), signed URLs | Cheap storage, no egress fees; private by default |
-| Customer login | Phone OTP over WhatsApp (Meta Cloud API); SMS via MSG91 as fallback | Indian homeowners expect phone login. SMS in India needs DLT template registration, which takes days, so start it early |
-| Staff login | Email + password (argon2) with optional OTP; roles per tenant | Simple and secure |
-| Payments | Razorpay subscriptions + GST invoices | Indian billing standard |
-| Notifications | WhatsApp templates for new leads; email via Resend or SES | Sales teams live on WhatsApp |
-| Hosting | Docker Compose on one VPS in India (AWS Mumbai or DigitalOcean Bangalore): api, worker, Postgres, Redis. Daily DB backups to R2 | Low latency for Indian users; data stays in India; cheap to start |
-| Monitoring | Sentry (errors), structured logs, uptime check, a cost-per-image dashboard | AI cost is the main running cost |
-| Tests | Vitest (unit), Playwright (port of our 74-check UI test), CI on GitHub Actions | Catch regressions before each deploy |
+| Frontend | React + Vite + React Router (as now) | Already built and tested |
+| Backend | Node 22 + Express 5 + TypeScript, plus `zod` for request checks | Already in use |
+| Database | SQLite via `better-sqlite3` (stable driver, replaces the experimental `node:sqlite`) | A few staff and one usage row per design: SQLite is plenty, and there's no DB server to run |
+| Passwords | `scrypt` from Node's `crypto` (no native add-on needed) | Secure hashing with no extra dependency |
+| Sessions | Random session ID in an HTTP-only cookie, stored in the DB (logout works everywhere) | Simple and revocable |
+| Web server | Caddy in front of Node | Automatic HTTPS certificates; long timeout for 30–60 s AI calls |
+| Packaging | Docker Compose: `app` + `caddy` | One command to deploy or roll back |
+| CI/CD | GitHub Actions: typecheck, tests, build image; deploy over SSH on a tag | Repeatable releases |
+
+**No job queue is needed.** A few staff generating designs is well inside xAI's limit (6 requests/second for the image model), so the request simply waits for the AI, as it does now.
 
 ---
 
-## 4. Data model (first version)
+## 4. Data model
 
 ```
-tenants            id, name, slug, custom_domain, branding (logo, colours), plan_id, status
-users              id, tenant_id, role (customer | staff | tenant_admin | euc_admin), name, phone, email, password_hash
-projects           id, tenant_id, customer_id, room_type, source (photo | render), original_image_key, created_at
-generations        id, project_id, parent_id (for "refine" chains), style_id, options (json), prompt,
-                   provider, model, status (queued | running | done | failed), error,
-                   output_image_key, cost_paise, latency_ms, created_at
-catalogue_groups   id, tenant_id, key (wall | shutters | countertop | flooring | ceiling | handles), label, sort
-catalogue_items    id, group_id, name, swatch_hex, swatch_image_key, prompt_text, active, sort
-styles             id, tenant_id (null = EUC default), name, blurb, prompt_text, active, sort
-leads              id, tenant_id, project_id, generation_id, customer_id, name, phone, email, city, message,
-                   status (new | contacted | site_visit | quoted | won | lost), assigned_to, source
-lead_events        id, lead_id, user_id, type (note | status | call | whatsapp), body, created_at
-credit_ledger      id, tenant_id, generation_id, delta, reason (plan | purchase | generation | refund), created_at
-subscriptions      id, tenant_id, razorpay_id, plan_id, status, renews_at
-consents           id, user_id, purpose, granted_at, withdrawn_at
-audit_log          id, tenant_id, user_id, action, target, created_at
+users       id, name, email, password_hash, role (admin | staff), daily_limit, active, created_at, last_login_at
+sessions    id (random), user_id, expires_at, created_at
+usage_log   id, user_id, created_at, customer_label (optional, typed by staff),
+            room_type, source (photo | render), style, options (json: finishes, extras, note),
+            provider, model, status (ok | failed | blocked), error, latency_ms, est_cost_paise
 ```
 
-Every tenant-owned table has `tenant_id`, and every query filters by it. A shared helper enforces this so one manufacturer can never see another's data.
+`customer_label` is an optional "Customer / project" field in the studio bar. It lets EUC match AI usage to the design amount they charged, without storing any images.
 
 ---
 
 ## 5. Phases
 
-Estimates assume **one full-time developer** (with AI assistance). Phases 1 and 2 can overlap.
+Estimates are for **one developer**.
 
-### Phase 0: Foundations (week 1–2)
+### Phase 1: Trim to scope (2–3 days)
 
-Goal: same features as the MVP, on production-grade plumbing.
+- [ ] Remove the quote modal, leads routes, leads admin, `designs` / `leads` tables, image saving and `/uploads`
+- [ ] `/api/redesign` returns each design as a data URL; Download and Refine work from that
+- [ ] "Leave page?" warning when there are designs not yet downloaded
+- [ ] **Download all**: save every design in one click
+- [ ] Switch to `better-sqlite3`; add `zod` validation
+- [ ] Update the UI test suite to the new flow
 
-- [ ] Restructure into the monorepo; move catalogue, prompt and types into `packages/shared`
-- [ ] PostgreSQL + Drizzle schema + migrations; seed default styles and catalogue from `shared/catalog.ts`
-- [ ] R2 storage with signed upload and download URLs
-- [ ] zod validation on every endpoint
-- [ ] Docker Compose (api, worker, postgres, redis) for local and server
-- [ ] CI: typecheck, lint, unit tests, Playwright suite
-- [ ] Staging server with HTTPS; Sentry; daily backups
+**Done when:** the full studio flow works and nothing is written to disk except the database.
 
-**Done when:** the current demo flow works on staging and CI is green.
+### Phase 2: Staff accounts and usage (3–4 days)
 
-### Phase 1: AI quality and the generation pipeline (week 2–4)
+- [ ] Login page (reuses the branded hero); all studio and API routes require login
+- [ ] Roles: **admin** (manages staff, sees usage) and **staff** (uses the studio)
+- [ ] First admin created by a command on the server: `npm run create-admin`
+- [ ] Admin pages:
+  - **Staff:** add, deactivate, reset password, set daily limit
+  - **Usage:** designs per day, month and person, failures, estimated AI cost, CSV export
+- [ ] Usage row written for every generation (success or failure)
+- [ ] Per-user daily image limit, with a clear message when it's reached
+- [ ] Login rate limiting; sessions expire after 12 hours idle
 
-Goal: designs that are reliable enough to sell, at a known cost.
+### Phase 3: Design quality and staff workflow (3–5 days)
 
-- [ ] **Test set:** 50 real customer photos and 10 Cabinet Vision renders (kitchens, halls, bedrooms; good and bad light)
-- [ ] **Scoring sheet:** for each image, rate 1–5 on structure kept (walls, windows, doors), changes applied, realism and render-layout kept
-- [ ] Run the set through xAI `grok-imagine-image-2.0`, Gemini and one more model; pick a default and a fallback
-- [ ] Harden prompts:
-  - **Render mode:** styles change materials and colours only, never layout. This is a known issue today: Japandi moved the island and added a window.
-  - **Room types:** add rules per room type.
-- [ ] Queue + worker: retries with backoff, provider fallback, a concurrency limit, a cancel option
-- [ ] Live progress in the UI (Server-Sent Events) instead of one long request
-- [ ] Record cost, time and outcome per generation; weekly quality report
-- [ ] Upload checks: file type, size, minimum resolution, basic content moderation
+- [ ] **Test set:** 20–30 real EUC photos and Cabinet Vision renders; score structure kept, changes applied and realism
+- [ ] **Render mode fix:** styles change only materials, colours and lighting, never the cabinet layout. Known issue: Japandi moved the island and added a window.
+- [ ] Notes box: hint ("people, text and logos are not added") and tap-to-add example prompts
+- [ ] Optional "Customer / project" field in the studio bar, saved to the usage log
+- [ ] **Presentation download:** a before/after image with the EUC logo, style name and date, generated in the browser and ready to send to the customer
+- [ ] Retry button on a failed design; automatic fallback to Gemini if xAI fails (needs a Gemini key)
 
-**Done when:** at least 80% of the test set scores 4+ on "structure kept", and the cost per image is known.
+### Phase 4: Deployment (2–3 days)
 
-### Phase 2: Customer accounts and projects (week 4–6)
+- [ ] `Dockerfile` (multi-stage: build, then a small runtime image) and `docker-compose.yml` (app + caddy)
+- [ ] VPS in India (DigitalOcean Bangalore or AWS Lightsail Mumbai, 1–2 GB RAM, Ubuntu 24.04), **in EUC's own cloud account**
+- [ ] Server hardening: SSH keys only, firewall (ports 22, 80, 443), automatic security updates, non-root deploy user
+- [ ] DNS: `A` record `studio.<euc-domain>` → server IP; Caddy issues the HTTPS certificate
+- [ ] Secrets in a server-only `.env`: `XAI_API_KEY`, `SESSION_SECRET`, optional `GEMINI_API_KEY`
+- [ ] Nightly SQLite backup kept for 14 days, plus a weekly server snapshot; **test a restore once**
+- [ ] Uptime monitor (for example UptimeRobot) with email or WhatsApp alerts
+- [ ] GitHub Actions: on a version tag, build, push the image, SSH deploy, health check; one-command rollback
 
-- [ ] Phone OTP login (WhatsApp first, SMS fallback); start **DLT registration in week 1**
-- [ ] Projects: each room keeps its photo, all designs and the refine history
-- [ ] "My designs" page; rename and delete projects
-- [ ] Share a design by link and to WhatsApp, with an image preview
-- [ ] Quote request tied to the account (no retyping); confirmation on WhatsApp
-- [ ] Credits per customer per day, so one visitor can't run up the bill
-- [ ] Consent at sign-up; "delete my data" (DPDP Act 2023)
+### Phase 5: Handover (1–2 days)
 
-**Done when:** a customer can log in on a phone, come back tomorrow and find their designs.
-
-### Phase 3: Manufacturer portal / multi-tenant (week 6–10)
-
-- [ ] Tenants: subdomain per manufacturer (`brand.roomstudio.in`), optional custom domain
-- [ ] Branding: logo, colours, studio headline; the studio themes itself per tenant
-- [ ] **Leads CRM:**
-  - list, filters, detail page with before/after
-  - status pipeline (new → contacted → site visit → quoted → won/lost), notes, assign to a salesperson
-  - WhatsApp and email alert on each new lead; CSV export
-- [ ] Team: invite staff, roles (admin, sales, designer)
-- [ ] **Catalogue manager:** add finishes per group with name, colour or swatch photo, and the prompt text; reorder; enable or disable
-- [ ] Styles: use EUC defaults or customise
-- [ ] Cabinet Vision area for designers: upload a render, get photoreal output, download in high resolution
-- [ ] Dashboard: designs made, leads, conversion, credits left
-
-**Done when:** two pilot manufacturers each have their own branded studio, catalogue and leads, fully separated.
-
-### Phase 4: Real products in the image (week 10–12)
-
-- [ ] **Swatch-guided edits:** send the finish's swatch photo along with the room photo, so the laminate in the design matches the real product. xAI's edit endpoint accepts up to 3 images, so check this against the test set.
-- [ ] **Tap to edit:** customer taps the wall, cabinet or floor; only that area changes (segmentation mask + masked edit)
-- [ ] Higher-resolution download for paying tenants
-
-**Done when:** a manufacturer agrees "that is our laminate" on most test designs.
-
-### Phase 5: Billing and EUC console (week 12–14)
-
-- [ ] Plans with included images per month; credit packs; Razorpay subscriptions; GST invoices
-- [ ] Usage metering from `credit_ledger`; soft and hard limits; low-credit alerts
-- [ ] EUC console: create and suspend tenants, set plans, grant credits, view usage, AI cost, margin and quality per tenant
-
-### Phase 6: Launch hardening (week 14–16)
-
-- [ ] Security review (auth, tenant isolation, file uploads, rate limits); fix findings
-- [ ] Load test: 50 parallel generations; queue behaves, no timeouts
-- [ ] DPDP: privacy policy, terms, consent records, retention (for example, delete unclaimed photos after 90 days)
-- [ ] Backups restore-tested; runbook for outages and provider failures
-- [ ] Landing page SEO, analytics, PWA install on phones
-- [ ] Pilot with 2–3 manufacturers; fix what they hit; then launch
-
-### Later (after launch)
-
-- **Embed widget:** one script tag puts the studio on a manufacturer's own website.
-- **Cabinet Vision link:** a desktop helper that watches CV's render export folder and uploads automatically.
-- Hindi and Tamil UI.
-- A short walkthrough video of the design (xAI also has a video model).
-- A rough price estimate from the chosen finishes and room size.
+- [ ] Staging check with 2–3 EUC staff on real customer photos; fix what they find
+- [ ] One-page staff guide: good photos, styles vs notes, refine, download
+- [ ] Admin guide: adding staff, reading usage, what to do if the AI fails
+- [ ] Runbook: deploy, roll back, restore backup, rotate the AI key
+- [ ] Hand over all accounts and credentials to EUC (VPS, xAI, domain DNS, GitHub)
 
 ---
 
-## 6. Timeline at a glance
+## 6. Timeline
 
-| Weeks | 1–2 | 3–4 | 5–6 | 7–8 | 9–10 | 11–12 | 13–14 | 15–16 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 Foundations | ██ | | | | | | | |
-| 1 AI quality + queue | █ | ██ | | | | | | |
-| 2 Accounts + projects | | █ | ██ | | | | | |
-| 3 Manufacturer portal | | | █ | ██ | ██ | | | |
-| 4 Real products | | | | | █ | ██ | | |
-| 5 Billing + EUC console | | | | | | █ | ██ | |
-| 6 Hardening + pilot | | | | | | | █ | ██ |
+| Week | Work |
+| --- | --- |
+| Week 1 | Phase 1 (trim) + Phase 2 (accounts and usage) |
+| Week 2 | Phase 3 (quality and workflow) + start Phase 4 (server, DNS, Docker) |
+| Week 3 | Finish deployment, staging check with EUC staff, handover |
 
-About **16 weeks** to a paid pilot with one developer; about 10 weeks with two.
+**About 3 weeks** to go live.
 
 ---
 
-## 7. Running costs to measure (Phase 1)
+## 7. Running costs (EUC pays directly)
 
-- **AI images** are the main cost, billed per generated image (and per input image on some models). Read the current prices in the xAI and Google consoles, and store the real cost of every generation in `generations.cost_paise`.
-- **Fixed costs:** VPS, R2 storage, WhatsApp template messages (charged per conversation), SMS OTPs, Sentry. These stay small until there are many tenants.
-- **Pricing rule of thumb:** set each plan's included images so AI cost stays under about 30% of the plan price.
+| Item | Cost |
+| --- | --- |
+| VPS in India | About ₹500–1,000 / month |
+| Domain | Already owned by EUC |
+| HTTPS certificate | Free (Caddy / Let's Encrypt) |
+| AI images (xAI) | Per image. Read the current price in the xAI console and set a **monthly spending limit** there; the usage page shows the running estimate |
+| Backups | Small (a few MB of database) |
+
+EUC's xAI account and billing should be **in EUC's name**, so AI cost goes straight to them and can be included in the design amount.
 
 ---
 
-## 8. Risks and how we handle them
+## 8. Risks
 
 | Risk | Mitigation |
 | --- | --- |
-| AI changes the room structure or the CV layout | Phase 1 test set + scoring before launch; stricter render prompts; tap-to-edit later |
-| One AI provider fails, gets slower or changes price | Provider interface already supports several; automatic fallback in the worker |
-| AI cost runs away | Credits per customer and per tenant; queue concurrency limit; cost dashboard |
-| One tenant sees another's data | `tenant_id` on every row, a shared query helper, tests for isolation |
-| SMS OTP blocked by DLT rules | Start registration in week 1; WhatsApp OTP first |
-| Customers upload unsuitable images | Upload checks + provider moderation; report button |
-| Personal data (home photos, phone numbers) | DPDP consent, deletion, retention limits, data hosted in India, signed URLs |
-| Customers expect exact sizes or prices | Clear "concept image, not to scale, not a quote" labels everywhere |
+| AI changes the room or the cabinet layout | Test set + render prompt fix in Phase 3; staff can refine or regenerate |
+| Staff lose designs on refresh (nothing stored) | "Leave page?" warning, Download all, presentation download |
+| AI provider down or slow | Gemini fallback; clear error with Retry |
+| Unexpected AI bill | Per-user daily limit, spending cap in the xAI console, usage page |
+| Customer photos leave EUC | Photos are not stored by us, but they are sent to xAI for processing. Tell EUC this and review xAI's data-retention terms |
+| Server problem | Nightly backups, weekly snapshot, uptime alerts, runbook, rollback |
 
 ---
 
-## 9. Decisions needed from EUC (before Phase 3)
+## 9. Needed from EUC
 
-1. **Who is the customer?** White-label for manufacturers (this plan), EUC's own lead tool, or both?
-2. **Pricing:** monthly plan per manufacturer, credits, or bundled with Cabinet Vision?
-3. **Pilot manufacturers:** which 2–3 (for example from their client list) and when?
-4. **Domain:** product name and domain (for example `roomstudio.in` with subdomains).
-5. **Brand on the studio:** manufacturer's brand only, or "Powered by EUC Technowood" too?
-6. **Catalogue data:** can pilot manufacturers supply finish names and swatch photos?
-7. **Data retention:** how long to keep customer photos and designs?
+1. **Subdomain** to use (for example `studio.<their-domain>`) and access to edit their DNS.
+2. **Cloud account** for the VPS, in EUC's name (or approval to create one).
+3. **xAI account** in EUC's name, with billing and a spending limit (or approval to move the current key).
+4. **Staff list:** names and emails, and who is admin.
+5. **Daily image limit** per staff member (suggested starting point: 30).
+6. **20–30 sample photos and renders** for the quality test.
 
 ---
 
-## 10. This week
+## 10. Next steps
 
-1. Share this plan with EUC and get answers to section 9 (at least 1, 3 and 4).
-2. Commit the current MVP and tag it `v0.1-demo`.
-3. Start collecting the 50-photo test set.
-4. Begin Phase 0: monorepo, Postgres, R2, CI.
-5. Start WhatsApp Business API and DLT registration (they take time).
+1. Commit the current demo as `v0.1-demo`.
+2. Start Phase 1 (trim to scope).
+3. Send section 9 to EUC so the accounts and DNS are ready by week 2.
