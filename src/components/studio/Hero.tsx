@@ -28,15 +28,15 @@ export function Hero({ onFile }: Props) {
             <span>Before it's built.</span>
           </h1>
           <p className="hero-sub">
-            Turn a room photo or a Cabinet Vision render into photoreal interior designs in under a minute. Compare styles,
-            finishes and colours, then request a quote.
+            Turn a customer's room photo or a Cabinet Vision render into photoreal interior designs in under a minute.
+            Compare styles, finishes and colours, then download the designs for your customer.
           </p>
 
           <div className="mode-cards">
             <FileDrop onFile={(f) => onFile(f, 'photo')} className="mode-card">
-              <span className="mode-kicker">For homeowners & showrooms</span>
+              <span className="mode-kicker">Customer's room</span>
               <strong>Redesign a room photo</strong>
-              <span className="mode-desc">Upload a kitchen, hall or bedroom photo and see it in new styles and finishes.</span>
+              <span className="mode-desc">Upload the customer's kitchen, hall or bedroom photo and show it in new styles and finishes.</span>
               <span className="btn btn-gold mode-btn">
                 <UploadIcon /> Upload room photo
               </span>
@@ -44,10 +44,10 @@ export function Hero({ onFile }: Props) {
 
             <FileDrop onFile={(f) => onFile(f, 'render')} className="mode-card">
               <span className="mode-kicker">
-                <img src="/brand/cabinet-vision-icon.png" alt="" width={18} height={18} /> For Cabinet Vision users
+                <img src="/brand/cabinet-vision-icon.png" alt="" width={18} height={18} /> Cabinet Vision
               </span>
               <strong>Make a render photoreal</strong>
-              <span className="mode-desc">Upload a Cabinet Vision 3D render and get a photo-quality image to show your client.</span>
+              <span className="mode-desc">Upload a Cabinet Vision 3D render and get a photo-quality image to show the customer.</span>
               <span className="btn mode-btn">
                 <UploadIcon /> Upload render
               </span>
@@ -84,8 +84,8 @@ export function Hero({ onFile }: Props) {
           </li>
           <li>
             <b>03</b>
-            <strong>Compare and get a quote</strong>
-            <span>Slide between before and after for every style, then request a quote for the one you like.</span>
+            <strong>Compare and download</strong>
+            <span>Slide between before and after for every style, then download the designs to share with your customer.</span>
           </li>
         </ol>
 

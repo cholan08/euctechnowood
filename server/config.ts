@@ -11,20 +11,12 @@ try {
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const env = process.env;
-const isProd = env.NODE_ENV === 'production';
-
-if (isProd && (!env.ADMIN_PASSWORD || !env.SESSION_SECRET)) {
-  throw new Error('Set ADMIN_PASSWORD and SESSION_SECRET in the environment for production.');
-}
 
 export const config = {
-  isProd,
+  isProd: env.NODE_ENV === 'production',
   port: Number(env.PORT || 8787),
   trustProxy: env.TRUST_PROXY === '1',
   distDir: path.join(root, 'dist'),
-  dataDir: env.DATA_DIR || path.join(root, 'data'),
+  /** Max generated images per visitor IP per hour. Replaced by per-staff daily limits in Phase 2. */
   imagesPerHour: Number(env.IMAGES_PER_HOUR || 40),
-  leadsPerHour: Number(env.LEADS_PER_HOUR || 10),
-  adminPassword: env.ADMIN_PASSWORD || 'admin',
-  sessionSecret: env.SESSION_SECRET || 'dev-only-secret-change-me',
 } as const;

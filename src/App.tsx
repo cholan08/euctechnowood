@@ -1,6 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
-import AdminPage from './pages/AdminPage';
 import StudioPage from './pages/StudioPage';
 
 export default function App() {
@@ -8,7 +7,6 @@ export default function App() {
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<StudioPage />} />
-        <Route path="admin" element={<AdminPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

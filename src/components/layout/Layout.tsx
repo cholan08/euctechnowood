@@ -1,10 +1,7 @@
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet } from 'react-router-dom';
 import { Logo } from '../ui/Logo';
 
 export function Layout() {
-  const { pathname } = useLocation();
-  const isAdmin = pathname.startsWith('/admin');
-
   return (
     <div className="shell">
       <header className="site-header">
@@ -17,15 +14,9 @@ export function Layout() {
               euctechnowood.com
             </a>
           </div>
-          {isAdmin ? (
-            <Link className="btn btn-sm nav-cta" to="/">
-              Open studio
-            </Link>
-          ) : (
-            <a className="btn btn-sm nav-cta" href="https://www.euctechnowood.com/" target="_blank" rel="noreferrer">
-              Book a demo
-            </a>
-          )}
+          <a className="btn btn-sm nav-cta" href="https://www.euctechnowood.com/" target="_blank" rel="noreferrer">
+            Book a demo
+          </a>
         </nav>
       </header>
 
@@ -37,10 +28,10 @@ export function Layout() {
         <div className="container">
           <img src="/brand/logo.png" alt="EUC Technowood" width={130} height={39} className="footer-logo" />
           <p>
-            AI designs are concept images for inspiration. They are not to scale, not a quote and not a buildable drawing.
+            AI designs are concept images for inspiration. They are not to scale and not a buildable drawing.
           </p>
           <p>
-            © {new Date().getFullYear()} EUC Technowood · Authorized Hexagon reseller in India · <Link to="/admin">Team login</Link>
+            © {new Date().getFullYear()} EUC Technowood · Authorized Hexagon reseller in India
           </p>
         </div>
       </footer>

@@ -24,17 +24,18 @@ interface Props {
   /** Show the prompt sent to the AI (open the page with ?debug). */
   debug: boolean;
   onRefine: (variation: Variation) => void;
-  onQuote: (variation: Variation) => void;
-}
-
-function fileName(v: Variation): string {
-  const ext = v.image?.endsWith('.png') ? 'png' : 'jpg';
-  return `euc-room-design-${(v.styleId ?? 'custom').replace(/[^a-z0-9-]/gi, '')}.${ext}`;
+  /** Ids of designs already downloaded (images are not stored anywhere else). */
+  downloaded: ReadonlySet<string>;
+  onDownload: (variation: Variation) => void;
+  onDownloadAll: () => void;
 }
 
 /** The big image area: the uploaded image, the loading state, or the designs to compare. */
 export function Viewer(props: Props) {
-  const { before, ratio, busy, elapsed, pending, generateLabel, variations, selected, onSelect, debug, onRefine, onQuote } = props;
+  const { before, ratio, busy, elapsed, pending, generateLabel, variations, selected, onSelect, debug, onRefine } = props;
+  const { downloaded, onDownload, onDownloadAll } = props;
+  const ready = variations?.filter((v) => v.image) ?? [];
+  const notSaved = ready.filter((v) => !downloaded.has(v.id)).length;
   const [canvasRef, size] = useFitSize<HTMLDivElement>(ratio);
   const current = variations?.[selected];
   const stage = STAGES[Math.min(STAGES.length - 1, Math.floor(elapsed / 7))];
@@ -88,6 +89,11 @@ export function Viewer(props: Props) {
                 onClick={() => onSelect(i)}
               >
                 {v.image ? <img src={v.image} alt="" /> : <span className="variant-x">!</span>}
+                {downloaded.has(v.id) && (
+                  <span className="variant-saved" title="Downloaded">
+                    ✓ Saved
+                  </span>
+                )}
                 <span className="variant-label">{v.label}</span>
               </button>
             ))}
@@ -100,18 +106,26 @@ export function Viewer(props: Props) {
 
         {!busy && current?.image && (
           <div className="viewer-actions">
-            <a className="btn btn-sm" href={current.image} download={fileName(current)}>
-              Download
-            </a>
             <button type="button" className="btn btn-sm" onClick={() => onRefine(current)}>
               Refine this design
             </button>
-            <button type="button" className="btn btn-gold quote-btn" onClick={() => onQuote(current)}>
-              Get a quote for this design
+            {ready.length > 1 && (
+              <button type="button" className="btn btn-sm download-all" onClick={onDownloadAll}>
+                Download all ({ready.length})
+              </button>
+            )}
+            <button type="button" className="btn btn-gold download-btn" onClick={() => onDownload(current)}>
+              {downloaded.has(current.id) ? 'Download again' : 'Download design'}
             </button>
           </div>
         )}
       </div>
+
+      {!busy && notSaved > 0 && (
+        <p className="save-reminder" role="status">
+          Designs are not saved anywhere. Download the ones you want to keep ({notSaved} not downloaded yet).
+        </p>
+      )}
 
       {debug && current && (
         <details className="debug">
