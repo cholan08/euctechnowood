@@ -1,0 +1,38 @@
+# Render Blueprint: the Room Studio API (Express) only.
+# The frontend is hosted separately (Vercel), so client/dist is never built here
+# and the server only answers /api/*.
+projects:
+  - name: euc-room-studio
+    environments:
+      - name: production
+        services:
+          - type: web
+            name: euc-room-studio-api
+            runtime: node
+            plan: free
+            region: singapore
+            branch: phase-1-trim
+            # tsx (used by `npm start`) is a devDependency, and NODE_ENV=production
+            # would otherwise make npm skip devDependencies.
+            buildCommand: npm ci --include=dev
+            startCommand: npm start
+            healthCheckPath: /api/health
+            autoDeployTrigger: commit
+            # Frontend-only changes don't redeploy the API.
+            buildFilter:
+              paths:
+                - server/**
+                - shared/**
+                - package.json
+                - package-lock.json
+            envVars:
+              - key: NODE_VERSION
+                value: "22"
+              - key: NODE_ENV
+                value: production
+              - key: TRUST_PROXY
+                value: "1"
+              - key: IMAGE_PROVIDER
+                value: xai
+              - key: XAI_API_KEY
+                sync: false # pasted into the Render dashboard, never committed
