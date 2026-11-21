@@ -2,10 +2,7 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { config } from './config';
-import { adminRouter } from './routes/admin';
-import { leadsRouter } from './routes/leads';
 import { redesignRouter } from './routes/redesign';
-import { uploadsDir } from './services/imageStore';
 
 export function createApp() {
   const app = express();
@@ -19,16 +16,14 @@ export function createApp() {
     next();
   });
 
-  app.use('/api', redesignRouter, leadsRouter, adminRouter);
+  app.use('/api', redesignRouter);
   app.use('/api', (_req, res) => void res.status(404).json({ error: 'Not found.' }));
-
-  app.use('/uploads', express.static(uploadsDir, { maxAge: '7d', immutable: true }));
 
   // In production, serve the built frontend (npm run build) from the same server.
   if (existsSync(config.distDir)) {
     app.use(express.static(config.distDir));
-    // Client-side routes such as /admin must still load the app.
-    app.get(/^(?!\/(api|uploads)\/).*/, (_req, res) => {
+    // Client-side routes must still load the app.
+    app.get(/^(?!\/api\/).*/, (_req, res) => {
       res.sendFile(path.join(config.distDir, 'index.html'));
     });
   }

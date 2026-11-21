@@ -5,6 +5,7 @@ import { createXaiProvider } from './xai';
 /** Mock: returns the uploaded photo unchanged after a short delay. For UI work without an API key. */
 const mockProvider: ImageEditProvider = {
   name: 'mock',
+  imageRef: (index) => `<IMAGE_${index}>`,
   async edit(input) {
     await new Promise((resolve) => setTimeout(resolve, 800 + Math.random() * 1200));
     return { mimeType: input.image.mimeType, base64: input.image.base64 };

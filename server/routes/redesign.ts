@@ -2,10 +2,8 @@ import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import type { RedesignResponse, Variation } from '../../shared/types';
 import { config } from '../config';
-import { designs } from '../db/designs';
 import { getProvider } from '../providers';
 import { ProviderError } from '../providers/types';
-import { imageUrl, saveImage } from '../services/imageStore';
 import { buildJobs } from '../services/prompt';
 import { RateLimiter } from '../services/rateLimiter';
 import { parseRedesignRequest, RequestError, type ParsedRequest } from '../services/validate';
@@ -31,37 +29,24 @@ redesignRouter.post('/redesign', async (req, res) => {
     throw err;
   }
 
-  const jobs = buildJobs(input);
+  const jobs = buildJobs(input, provider.imageRef);
   if (!quota.take(req.ip ?? 'unknown', jobs.length)) {
     res.status(429).json({ error: 'You have reached the hourly limit for designs. Please try again later.' });
     return;
   }
 
-  const beforeFile = await saveImage(input.image.mimeType, input.image.base64);
-
   // All variations run in parallel; one failing does not fail the others.
+  // Nothing is written to disk: each image goes straight back to the browser.
   const variations = await Promise.all(
     jobs.map(async (job): Promise<Variation> => {
       const started = Date.now();
-      const base = { label: job.label, styleId: job.styleId, prompt: job.prompt };
+      const base = { id: randomUUID(), label: job.label, specs: job.specs, prompt: job.prompt };
       try {
         const out = await provider.edit(
-          { prompt: job.prompt, image: input.image, width: input.width, height: input.height },
+          { prompt: job.prompt, image: input.image, references: job.references, width: input.width, height: input.height },
           AbortSignal.timeout(120_000),
         );
-        const afterFile = await saveImage(out.mimeType, out.base64);
-        const id = randomUUID();
-        designs.create({
-          id,
-          roomType: input.room.label,
-          label: job.label,
-          summary: job.summary,
-          prompt: job.prompt,
-          provider: provider.name,
-          beforeFile,
-          afterFile,
-        });
-        return { ...base, id, image: imageUrl(afterFile), ms: Date.now() - started };
+        return { ...base, image: `data:${out.mimeType};base64,${out.base64}`, ms: Date.now() - started };
       } catch (err) {
         console.error(`[redesign] "${job.label}" failed:`, err);
         return { ...base, error: describeError(err), ms: Date.now() - started };
