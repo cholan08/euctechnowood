@@ -29,7 +29,7 @@ redesignRouter.post('/redesign', async (req, res) => {
     throw err;
   }
 
-  const jobs = buildJobs(input);
+  const jobs = buildJobs(input, provider.imageRef);
   if (!quota.take(req.ip ?? 'unknown', jobs.length)) {
     res.status(429).json({ error: 'You have reached the hourly limit for designs. Please try again later.' });
     return;
@@ -40,10 +40,10 @@ redesignRouter.post('/redesign', async (req, res) => {
   const variations = await Promise.all(
     jobs.map(async (job): Promise<Variation> => {
       const started = Date.now();
-      const base = { id: randomUUID(), label: job.label, styleId: job.styleId, prompt: job.prompt };
+      const base = { id: randomUUID(), label: job.label, specs: job.specs, prompt: job.prompt };
       try {
         const out = await provider.edit(
-          { prompt: job.prompt, image: input.image, width: input.width, height: input.height },
+          { prompt: job.prompt, image: input.image, references: job.references, width: input.width, height: input.height },
           AbortSignal.timeout(120_000),
         );
         return { ...base, image: `data:${out.mimeType};base64,${out.base64}`, ms: Date.now() - started };

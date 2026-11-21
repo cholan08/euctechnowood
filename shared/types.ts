@@ -1,4 +1,15 @@
-import type { RoomTypeId } from './catalog';
+import type { RoomTypeId, Selection } from './catalog';
+
+/** One design option ("Option A"): a full spec of what to change. Each produces one image. */
+export interface DesignSpec {
+  name: string;
+  /** Element id -> what to change it to. Elements not listed stay exactly as in the image. */
+  elements: Record<string, Selection>;
+  addons: string[];
+  /** Lighting mood id; "" = as in the image. */
+  mood: string;
+  notes: string;
+}
 
 /** What the browser sends to POST /api/redesign. */
 export interface RedesignRequest {
@@ -9,19 +20,23 @@ export interface RedesignRequest {
   /** A real photo of a room, or a 3D render from Cabinet Vision. */
   source: 'photo' | 'render';
   roomType: RoomTypeId;
-  /** One design is generated per style. Empty = one design that keeps the current style. */
-  styleIds: string[];
-  /** Change group id -> chosen option id. */
-  changes: Record<string, string>;
-  extras: string[];
-  notes: string;
+  /** 1 to MAX_VARIANTS options; one image per option. */
+  variants: DesignSpec[];
+}
+
+/** One line of a design's spec sheet, e.g. "Base cabinets: Sage green · Laminate · Matte". */
+export interface SpecLine {
+  label: string;
+  value: string;
+  hex?: string;
 }
 
 export interface Variation {
   /** Random id, only used to tell designs apart in the browser. */
   id: string;
   label: string;
-  styleId: string | null;
+  /** What was changed, for the on-screen spec sheet. */
+  specs: SpecLine[];
   /** The exact prompt sent to the AI, shown with ?debug so the team can tune it. */
   prompt: string;
   /**

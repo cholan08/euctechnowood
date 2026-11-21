@@ -55,6 +55,9 @@ export function createGeminiProvider(config: GeminiConfig): ImageEditProvider {
   return {
     name: `gemini:${config.model}`,
 
+    // Gemini reads images in the order sent, after the text: the room photo is the first image.
+    imageRef: (index) => `image ${index + 1}`,
+
     async edit(input: EditInput, signal?: AbortSignal): Promise<EditOutput> {
       const response = await fetch(url, {
         method: 'POST',
@@ -66,7 +69,7 @@ export function createGeminiProvider(config: GeminiConfig): ImageEditProvider {
               role: 'user',
               parts: [
                 { text: input.prompt },
-                { inline_data: { mime_type: input.image.mimeType, data: input.image.base64 } },
+                ...[input.image, ...(input.references ?? [])].map((img) => ({ inline_data: { mime_type: img.mimeType, data: img.base64 } })),
               ],
             },
           ],

@@ -1,0 +1,149 @@
+/* ================= App shell: top bar + one full-height work area ================= */
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+/* Desktop: the whole app is exactly one screen; only inner panels may scroll. */
+@media (min-width: 901px) {
+  .app {
+    display: grid;
+    grid-template-rows: var(--bar-h) minmax(0, 1fr);
+    height: 100dvh;
+    overflow: hidden;
+  }
+}
+
+.appbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: var(--bar-h);
+  padding: 0 16px;
+  border-bottom: 1px solid var(--line);
+  background: rgb(11 12 14 / 88%);
+  backdrop-filter: blur(12px);
+}
+
+.appbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.appbar-brand svg {
+  flex: none;
+}
+
+.appbar-name {
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.appbar-sep {
+  width: 1px;
+  height: 20px;
+  margin-inline: 4px;
+  background: var(--line-strong);
+}
+
+/* The client's logo sits on its own small white plate, since it is drawn for light backgrounds. */
+.client-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-3);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.client-chip img {
+  box-sizing: content-box;
+  width: 76px;
+  height: auto;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.appbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* AI status: grey while connecting, green live, amber demo, red offline. */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--text-2);
+  font: 500 11px/1 var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.status::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-3);
+}
+
+.status-ok::before {
+  background: var(--ok);
+  box-shadow: 0 0 0 3px rgb(74 222 128 / 18%);
+}
+
+.status-warn {
+  border-color: rgb(251 191 36 / 35%);
+  color: var(--warn);
+}
+
+.status-warn::before {
+  background: var(--warn);
+}
+
+.status-bad {
+  border-color: rgb(248 113 113 / 35%);
+  color: var(--danger);
+}
+
+.status-bad::before {
+  background: var(--danger);
+}
+
+@media (max-width: 640px) {
+  .appbar {
+    padding: 0 12px;
+  }
+
+  .appbar-sep,
+  .client-chip span {
+    display: none;
+  }
+
+  .client-chip img {
+    width: 60px;
+  }
+}
+
+@media (max-width: 420px) {
+  .client-chip {
+    display: none;
+  }
+}

@@ -16,7 +16,8 @@ export const config = {
   isProd: env.NODE_ENV === 'production',
   port: Number(env.PORT || 8787),
   trustProxy: env.TRUST_PROXY === '1',
-  distDir: path.join(root, 'dist'),
+  /** The built frontend (npm run build). */
+  distDir: path.join(root, 'client', 'dist'),
   /** Max generated images per visitor IP per hour. Replaced by per-staff daily limits in Phase 2. */
   imagesPerHour: Number(env.IMAGES_PER_HOUR || 40),
 } as const;

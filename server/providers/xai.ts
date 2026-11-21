@@ -1,4 +1,4 @@
-import { ProviderError, type EditInput, type EditOutput, type ImageEditProvider } from './types';
+import { ProviderError, type EditInput, type EditOutput, type ImageData, type ImageEditProvider } from './types';
 
 // xAI "Grok Imagine" edits an image from a text instruction.
 // Docs: https://docs.x.ai/developers/model-capabilities/images/editing
@@ -16,20 +16,24 @@ interface EditResponse {
   error?: { message?: string } | string;
 }
 
+const asImage = (img: ImageData) => ({ type: 'image_url', url: `data:${img.mimeType};base64,${img.base64}` });
+
 export function createXaiProvider(config: XaiConfig): ImageEditProvider {
   return {
     name: `xai:${config.model}`,
 
+    // Multi-image edits take up to five images, named <IMAGE_0>, <IMAGE_1>... in the prompt.
+    // Docs: https://docs.x.ai/developers/model-capabilities/images/multi-image-editing
+    imageRef: (index) => `<IMAGE_${index}>`,
+
     async edit(input: EditInput, signal?: AbortSignal): Promise<EditOutput> {
+      // `image` and `images` are mutually exclusive; the room photo goes first so the output follows its aspect ratio.
+      const images = input.references?.length ? { images: [input.image, ...input.references].map(asImage) } : { image: asImage(input.image) };
       const response = await fetch('https://api.x.ai/v1/images/edits', {
         method: 'POST',
         signal,
         headers: { 'content-type': 'application/json', authorization: `Bearer ${config.apiKey}` },
-        body: JSON.stringify({
-          model: config.model,
-          prompt: input.prompt,
-          image: { type: 'image_url', url: `data:${input.image.mimeType};base64,${input.image.base64}` },
-        }),
+        body: JSON.stringify({ model: config.model, prompt: input.prompt, ...images }),
       });
 
       const json = (await response.json().catch(() => ({}))) as EditResponse;

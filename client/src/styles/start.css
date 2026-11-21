@@ -1,0 +1,203 @@
+/* ================= Start screen (no image yet) ================= */
+.start {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(32px, 5vw, 72px);
+  min-height: 0;
+  padding: 32px max(24px, (100% - 1320px) / 2);
+  overflow-y: auto;
+  /* A faint accent glow so the empty screen doesn't feel flat. */
+  background: radial-gradient(700px 360px at 8% 0%, rgb(212 255 58 / 6%), transparent 70%);
+}
+
+.start h1 {
+  margin-top: 14px;
+  font-size: clamp(32px, 3.3vw, 50px);
+  letter-spacing: -0.035em;
+}
+
+.start-sub {
+  max-width: 54ch;
+  margin-top: 14px;
+  color: var(--text-2);
+  font-size: 16px;
+}
+
+.drop-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.drop-tile {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 20px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+
+.drop-tile:hover {
+  border-color: var(--accent-line);
+  background: var(--surface-2);
+}
+
+.drop-tile.over {
+  border-style: solid;
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  transform: scale(1.01);
+}
+
+.drop-tile:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.drop-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 6px;
+  border-radius: 10px;
+  background: var(--surface-3);
+  color: var(--accent);
+}
+
+.drop-tile strong {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.drop-desc {
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.drop-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.start-hint {
+  margin-top: 14px;
+  color: var(--text-3);
+  font-size: 13px;
+}
+
+.start-main .alert {
+  margin-top: 14px;
+}
+
+.tips {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.tips ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 20px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tips li {
+  display: flex;
+  gap: 10px;
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.tips li span {
+  color: var(--text-3);
+  font: 500 11px/1.9 var(--mono);
+}
+
+.start-side {
+  display: grid;
+  gap: 16px;
+}
+
+.showcase {
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.showcase figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 4px 0;
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flow li {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.flow .eyebrow {
+  color: var(--accent);
+}
+
+.flow strong {
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.flow li > span:last-child {
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .start {
+    grid-template-columns: 1fr;
+    padding: 24px 16px 40px;
+  }
+}
+
+@media (max-width: 560px) {
+  .drop-grid,
+  .tips ul,
+  .flow {
+    grid-template-columns: 1fr;
+  }
+}

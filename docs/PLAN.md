@@ -6,7 +6,7 @@ Updated: 20 Nov 2026. Starting point: the working MVP in this repo (one-screen s
 
 ## 1. What we are building
 
-An **internal design tool for EUC Technowood's staff**. During EUC's paid design process (the customer pays a design amount before the project starts), a staff member uploads the customer's room photo or a Cabinet Vision render. They try styles and finishes, compare before and after, and **download** the designs to share with the customer.
+An **internal design tool for EUC Technowood's staff**. During EUC's paid design process (the customer pays a design amount before the project starts), a staff member uploads the customer's room photo or a Cabinet Vision render. The customer's image is treated as the approved layout: staff change only finishes, part by part (shutters, countertop, handles, floor...), with up to four options (A–D) side by side. They compare before and after and **download** the designs to share with the customer.
 
 **Scope decisions (agreed):**
 
@@ -31,7 +31,7 @@ An **internal design tool for EUC Technowood's staff**. During EUC's paid design
 | Studio UI (one screen, tabs, compare slider, thumbnails) | "Get a quote" form, leads admin, CSV of leads | Staff login with personal accounts |
 | `server/services/prompt.ts` and guardrails | `designs` / `leads` tables | Admin: manage staff, view usage and AI cost |
 | xAI + Gemini providers, mock mode | Saving images to disk, `/uploads` | Usage log per generation |
-| Brand styling, landing slider | Public landing page as a homepage (becomes the login page) | Per-user daily image limit |
+| Studio styling, start-screen example slider | Public landing page as a homepage (becomes the login page) | Per-user daily image limit |
 | UI test suite | | Deployment: Docker, HTTPS, backups |
 
 ---
@@ -76,7 +76,7 @@ An **internal design tool for EUC Technowood's staff**. During EUC's paid design
 users       id, name, email, password_hash, role (admin | staff), daily_limit, active, created_at, last_login_at
 sessions    id (random), user_id, expires_at, created_at
 usage_log   id, user_id, created_at, customer_label (optional, typed by staff),
-            room_type, source (photo | render), style, options (json: finishes, extras, note),
+            room_type, source (photo | render), option_name, spec (json: element selections, add-ons, mood, note),
             provider, model, status (ok | failed | blocked), error, latency_ms, est_cost_paise
 ```
 
@@ -114,10 +114,11 @@ Estimates are for **one developer**.
 ### Phase 3: Design quality and staff workflow (3–5 days)
 
 - [ ] **Test set:** 20–30 real EUC photos and Cabinet Vision renders; score structure kept, changes applied and realism
-- [ ] **Render mode fix:** styles change only materials, colours and lighting, never the cabinet layout. Known issue: Japandi moved the island and added a window.
+- [x] **Layout fidelity:** whole-room styles removed (Japandi moved the island and added a window). Replaced by a per-part spec editor: every part not changed is listed in the prompt as "keep exactly"; layout rules forbid moving, adding or removing anything.
+- [ ] Replace the generic shades in `shared/catalog.ts` with EUC's real laminate / quartz / handle catalogue (shade names and codes)
 - [ ] Notes box: hint ("people, text and logos are not added") and tap-to-add example prompts
 - [ ] Optional "Customer / project" field in the studio bar, saved to the usage log
-- [ ] **Presentation download:** a before/after image with the EUC logo, style name and date, generated in the browser and ready to send to the customer
+- [ ] **Presentation download:** a before/after image with the EUC logo, the option's spec sheet and date, generated in the browser and ready to send to the customer
 - [ ] Retry button on a failed design; automatic fallback to Gemini if xAI fails (needs a Gemini key)
 
 ### Phase 4: Deployment (2–3 days)
@@ -134,7 +135,7 @@ Estimates are for **one developer**.
 ### Phase 5: Handover (1–2 days)
 
 - [ ] Staging check with 2–3 EUC staff on real customer photos; fix what they find
-- [ ] One-page staff guide: good photos, styles vs notes, refine, download
+- [ ] One-page staff guide: good photos, locking vs changing parts, options A–D, refine, download
 - [ ] Admin guide: adding staff, reading usage, what to do if the AI fails
 - [ ] Runbook: deploy, roll back, restore backup, rotate the AI key
 - [ ] Hand over all accounts and credentials to EUC (VPS, xAI, domain DNS, GitHub)
