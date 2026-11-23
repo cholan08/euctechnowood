@@ -115,7 +115,8 @@ studioRouter.post('/assist', async (req, res) => {
     return;
   }
   try {
-    const raw = await textProvider.complete(assistSystem(), assistMessage(input), AbortSignal.timeout(20_000));
+    // Generous: if the key only has a reasoning model, it thinks before answering.
+    const raw = await textProvider.complete(assistSystem(), assistMessage(input), AbortSignal.timeout(45_000));
     const suggestions = parseSuggestions(raw, input.kind);
     if (!suggestions.length) throw new Error(`No suggestions in the answer: ${raw.slice(0, 200)}`);
     const body: AssistResponse = { suggestions, provider: textProvider.name };
