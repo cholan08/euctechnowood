@@ -1,12 +1,14 @@
 import { ADDONS, MOODS, appliesTo, elementsFor, type ElementGroup, type RoomTypeId } from '../../../shared/catalog';
 import type { DesignSpec, RedesignRequest } from '../../../shared/types';
 
-/** Everything the panel edits: the request minus the image. */
-export type DesignState = Omit<RedesignRequest, 'image' | 'width' | 'height'>;
+/** Everything the Standard panel edits. The image and room type come from the page. */
+export type DesignState = Pick<RedesignRequest, 'source' | 'variants'>;
 
 export const letter = (i: number) => String.fromCharCode(65 + i);
 
 export const emptyVariant = (i: number): DesignSpec => ({ name: `Option ${letter(i)}`, elements: {}, addons: [], mood: '', notes: '' });
+
+export const EMPTY_DESIGN: DesignState = { source: 'photo', variants: [emptyVariant(0)] };
 
 /** Names always follow position, so removing B turns C into the new B. */
 export const renumber = (variants: DesignSpec[]) => variants.map((v, i) => ({ ...v, name: `Option ${letter(i)}` }));

@@ -15,6 +15,8 @@ export interface EditInput {
   references?: ImageData[];
   width: number;
   height: number;
+  /** Output size. Omitted = the service's default (about 1K); "2k" for the final image. */
+  resolution?: '2k';
 }
 
 export interface EditOutput {

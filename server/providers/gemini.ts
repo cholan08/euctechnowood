@@ -77,7 +77,7 @@ export function createGeminiProvider(config: GeminiConfig): ImageEditProvider {
             responseModalities: ['TEXT', 'IMAGE'],
             imageConfig: {
               aspectRatio: nearestAspectRatio(input.width, input.height),
-              imageSize: config.imageSize,
+              imageSize: input.resolution === '2k' ? '2K' : config.imageSize,
             },
           },
         }),

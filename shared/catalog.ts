@@ -1,8 +1,11 @@
 // The room, broken into the parts a modular-furniture designer specifies: base
-// cabinets, countertop, handles, floor... Each part is either LOCKED (kept exactly
-// as in the customer's image) or set to a precise spec: material + shade + sheen
-// (+ shutter design). The UI renders this file and the server turns the chosen ids
-// into the AI prompt, so this is the one place to add or reword options.
+// cabinets, countertop, handles, floor... Both ways of working read this file:
+// - Mark & edit: ONE part at a time. Staff mark it on the photo and click a
+//   suggested change (SUGGESTIONS below) or set a custom finish.
+// - Standard: a spec for the whole room (options A–D). Each part is LOCKED
+//   (kept as in the image) or set to material + shade + sheen (+ shutter design).
+// The UI renders this file and the server turns the chosen ids into the AI prompt,
+// so this is the one place to add or reword options.
 //
 // Later EUC can replace the generic shades with their real laminate / quartz
 // catalogue (shade codes, supplier names) without touching any other file.
@@ -22,7 +25,7 @@ export const ROOM_TYPES = [
 
 export type RoomTypeId = (typeof ROOM_TYPES)[number]['id'];
 
-/** A pickable value: a shade, a sheen, a shutter design... */
+/** A pickable value: a shade, a sheen, a laying pattern... */
 export interface Choice {
   id: string;
   label: string;
@@ -54,17 +57,22 @@ export interface Material {
 
 export type ElementGroup = 'cabinetry' | 'surfaces';
 
-/** One part of the room that can be kept or changed. */
+/** One part of the room that can be changed. */
 export interface RoomElement {
   id: string;
   label: string;
+  /** Tab in the Standard panel. */
   group: ElementGroup;
   /** How the prompt names it: "the base (lower) cabinet shutters". */
   noun: string;
   rooms?: readonly RoomTypeId[];
   materials: Material[];
-  /** Shutter / panel design, for joinery only. */
+  /** Shutter / panel design, for joinery only (Standard mode). */
   profiles?: Choice[];
+  /** Shutters: the prompt also holds every door and drawer line in place. */
+  doors?: boolean;
+  /** The change may alter the part's shape (new handles, a false ceiling), so the prompt does not hold it. */
+  reshape?: boolean;
 }
 
 /** A point on the image, 0–1 from the top left. */
@@ -73,26 +81,40 @@ export interface Point {
   y: number;
 }
 
-/** What the user chose for one element. No selection = locked to the original. */
+/** What the user chose for one part. In Standard mode, no selection = locked to the original. */
 export interface Selection {
   material: string;
   shade?: string;
   /** A custom colour (#rrggbb), for materials with `custom: true`. Wins over `shade`. */
   colour?: string;
   finish?: string;
+  /**
+   * Staff's extra details in their own words ("fluted grooves about 2 cm apart"),
+   * typed in the prompt bar, often polished with AI help. Added to the prompt as is.
+   */
+  details?: string;
+  /** Standard mode only: shutter design. */
   profile?: string;
   /**
-   * A photo of the real material sample (laminate sheet, tile, slab) as a data URL.
-   * The AI matches its colour, pattern and grain; it wins over `shade` and `colour`.
-   * Like every image here, it is never stored.
+   * Standard mode only: a photo of the real material sample (laminate sheet, tile,
+   * slab) as a data URL. The AI matches its colour, pattern and grain; it wins over
+   * `shade` and `colour`. Like every image here, it is never stored.
    */
   sample?: string;
-  /** Where this part is in the image, when only one of several should change (one wall, the island...). */
+  /** Standard mode only: where this part is, when only one of several should change. */
   area?: Point;
 }
 
 /** Sample photos per option. With the room photo that is five images, xAI's limit for one edit. */
 export const MAX_SAMPLES = 4;
+
+/** A rectangle on the image, 0–1 from the top left: where the marked area is. */
+export interface Box {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
 
 // ---------------------------------------------------------------- shades
 
@@ -191,6 +213,14 @@ const PROFILE_FRAME: Choice[] = [
   { id: 'silver', label: 'Silver profile', prompt: 'in slim brushed-silver aluminium profiles' },
 ];
 
+const SHUTTER_PROFILES: Choice[] = [
+  { id: 'slab', label: 'Flat slab', prompt: 'as flat slab shutters' },
+  { id: 'shaker', label: 'Shaker', prompt: 'as shaker shutters with a slim recessed frame' },
+  { id: 'fluted', label: 'Fluted', prompt: 'as shutters with fine vertical fluted grooves' },
+  { id: 'slatted', label: 'Slatted', prompt: 'as shutters with vertical slats' },
+  { id: 'arch', label: 'Arched', prompt: 'as shutters with a soft arched top panel' },
+];
+
 // ---------------------------------------------------------------- material sets
 
 const SHUTTER_MATERIALS: Material[] = [
@@ -215,14 +245,6 @@ const SHUTTER_MATERIALS: Material[] = [
     finishes: PROFILE_FRAME,
   },
   { id: 'lacquered-glass', label: 'Back-painted glass', prompt: 'back-painted lacquered glass', shadeLabel: 'Colour', shades: SOLID, custom: true },
-];
-
-const SHUTTER_PROFILES: Choice[] = [
-  { id: 'slab', label: 'Flat slab', prompt: 'as flat slab shutters' },
-  { id: 'shaker', label: 'Shaker', prompt: 'as shaker shutters with a slim recessed frame' },
-  { id: 'fluted', label: 'Fluted', prompt: 'as shutters with fine vertical fluted grooves' },
-  { id: 'slatted', label: 'Slatted', prompt: 'as shutters with vertical slats' },
-  { id: 'arch', label: 'Arched', prompt: 'as shutters with a soft arched top panel' },
 ];
 
 const UPHOLSTERY: Material[] = [
@@ -297,17 +319,16 @@ const COUNTER_MATERIALS: Material[] = [
 const ALL_JOINERY_ROOMS = ['kitchen', 'bedroom', 'kids', 'study', 'dining', 'pooja', 'bathroom', 'living'] as const;
 
 export const ELEMENTS: RoomElement[] = [
-  // Cabinetry
-  { id: 'base-cabinets', label: 'Base cabinets', group: 'cabinetry', noun: 'the base (lower) cabinet shutters and drawer fronts', rooms: ['kitchen'], materials: SHUTTER_MATERIALS, profiles: SHUTTER_PROFILES },
-  { id: 'wall-cabinets', label: 'Wall cabinets', group: 'cabinetry', noun: 'the wall-hung (upper) cabinet shutters', rooms: ['kitchen'], materials: SHUTTER_MATERIALS, profiles: SHUTTER_PROFILES },
-  { id: 'tall-units', label: 'Tall units', group: 'cabinetry', noun: 'the tall unit (pantry / appliance column) shutters', rooms: ['kitchen'], materials: SHUTTER_MATERIALS, profiles: SHUTTER_PROFILES },
-  { id: 'wardrobe', label: 'Wardrobe', group: 'cabinetry', noun: 'the wardrobe shutters', rooms: ['bedroom', 'kids'], materials: SHUTTER_MATERIALS, profiles: SHUTTER_PROFILES },
-  { id: 'loft', label: 'Loft', group: 'cabinetry', noun: 'the loft (overhead storage) shutters', rooms: ['kitchen', 'bedroom', 'kids'], materials: SHUTTER_MATERIALS, profiles: SHUTTER_PROFILES },
-  { id: 'tv-unit', label: 'TV unit', group: 'cabinetry', noun: 'the TV unit cabinetry and its back panel', rooms: ['living', 'bedroom'], materials: SHUTTER_MATERIALS, profiles: SHUTTER_PROFILES },
-  { id: 'storage', label: 'Storage units', group: 'cabinetry', noun: 'the built-in storage cabinets (crockery, shoe or book units)', rooms: ['living', 'dining', 'study', 'kids'], materials: SHUTTER_MATERIALS, profiles: SHUTTER_PROFILES },
+  { id: 'base-cabinets', label: 'Base cabinets', group: 'cabinetry', noun: 'the base (lower) cabinet shutters and drawer fronts', rooms: ['kitchen'], materials: SHUTTER_MATERIALS, profiles: SHUTTER_PROFILES, doors: true },
+  { id: 'wall-cabinets', label: 'Wall cabinets', group: 'cabinetry', noun: 'the wall-hung (upper) cabinet shutters', rooms: ['kitchen'], materials: SHUTTER_MATERIALS, profiles: SHUTTER_PROFILES, doors: true },
+  { id: 'tall-units', label: 'Tall units', group: 'cabinetry', noun: 'the tall unit (pantry / appliance column) shutters', rooms: ['kitchen'], materials: SHUTTER_MATERIALS, profiles: SHUTTER_PROFILES, doors: true },
+  { id: 'wardrobe', label: 'Wardrobe', group: 'cabinetry', noun: 'the wardrobe shutters', rooms: ['bedroom', 'kids'], materials: SHUTTER_MATERIALS, profiles: SHUTTER_PROFILES, doors: true },
+  { id: 'loft', label: 'Loft', group: 'cabinetry', noun: 'the loft (overhead storage) shutters', rooms: ['kitchen', 'bedroom', 'kids'], materials: SHUTTER_MATERIALS, profiles: SHUTTER_PROFILES, doors: true },
+  { id: 'tv-unit', label: 'TV unit', group: 'cabinetry', noun: 'the TV unit cabinetry and its back panel', rooms: ['living', 'bedroom'], materials: SHUTTER_MATERIALS, profiles: SHUTTER_PROFILES, doors: true },
+  { id: 'storage', label: 'Storage units', group: 'cabinetry', noun: 'the built-in storage cabinets (crockery, shoe or book units)', rooms: ['living', 'dining', 'study', 'kids'], materials: SHUTTER_MATERIALS, profiles: SHUTTER_PROFILES, doors: true },
   { id: 'study-unit', label: 'Study table', group: 'cabinetry', noun: 'the study table and its shelves', rooms: ['study', 'kids', 'bedroom'], materials: SHUTTER_MATERIALS.slice(0, 5) },
-  { id: 'pooja-unit', label: 'Pooja unit', group: 'cabinetry', noun: 'the pooja unit (mandir) cabinetry', rooms: ['pooja'], materials: SHUTTER_MATERIALS, profiles: SHUTTER_PROFILES },
-  { id: 'vanity', label: 'Vanity', group: 'cabinetry', noun: 'the vanity cabinet shutters', rooms: ['bathroom'], materials: SHUTTER_MATERIALS, profiles: SHUTTER_PROFILES.slice(0, 3) },
+  { id: 'pooja-unit', label: 'Pooja unit', group: 'cabinetry', noun: 'the pooja unit (mandir) cabinetry', rooms: ['pooja'], materials: SHUTTER_MATERIALS, profiles: SHUTTER_PROFILES, doors: true },
+  { id: 'vanity', label: 'Vanity', group: 'cabinetry', noun: 'the vanity cabinet shutters', rooms: ['bathroom'], materials: SHUTTER_MATERIALS, profiles: SHUTTER_PROFILES.slice(0, 3), doors: true },
   { id: 'bed', label: 'Bed & headboard', group: 'cabinetry', noun: 'the bed frame and headboard', rooms: ['bedroom', 'kids'], materials: [...UPHOLSTERY.slice(0, 3), SHUTTER_MATERIALS[4], SHUTTER_MATERIALS[1]] },
   { id: 'sofa', label: 'Sofa', group: 'cabinetry', noun: 'the sofa upholstery (same sofa shape and size)', rooms: ['living'], materials: UPHOLSTERY },
   {
@@ -315,6 +336,7 @@ export const ELEMENTS: RoomElement[] = [
     label: 'Handles',
     group: 'cabinetry',
     noun: 'the cabinet and wardrobe handles',
+    reshape: true,
     rooms: ALL_JOINERY_ROOMS,
     materials: [
       { id: 'gola', label: 'G-profile (handleless)', prompt: 'G-profile / gola handleless channels', shadeLabel: 'Metal', shades: METAL },
@@ -326,7 +348,6 @@ export const ELEMENTS: RoomElement[] = [
     ],
   },
 
-  // Surfaces
   { id: 'countertop', label: 'Countertop', group: 'surfaces', noun: 'the countertop (same thickness and edges)', rooms: ['kitchen', 'bathroom'], materials: COUNTER_MATERIALS },
   {
     id: 'backsplash',
@@ -418,6 +439,7 @@ export const ELEMENTS: RoomElement[] = [
     label: 'Ceiling',
     group: 'surfaces',
     noun: 'the ceiling',
+    reshape: true,
     materials: [
       { id: 'cove', label: 'False ceiling + cove', prompt: 'a gypsum false ceiling with a recessed warm-white cove light around its edge' },
       { id: 'peripheral', label: 'Peripheral drop', prompt: 'a peripheral gypsum false ceiling drop around the edges with recessed downlights, flat in the centre' },
@@ -427,7 +449,118 @@ export const ELEMENTS: RoomElement[] = [
   },
 ];
 
-// ---------------------------------------------------------------- global settings
+// ---------------------------------------------------------------- suggested changes (Mark & edit)
+
+/** A ready-made change, shown as a clickable prompt once the part is marked. */
+export interface Suggestion extends Selection {
+  /** Wording on the button when the automatic one ("Sage green laminate, matte") reads badly. */
+  label?: string;
+}
+
+const SHUTTER_SUGGEST: Suggestion[] = [
+  { material: 'laminate', shade: 'sage', finish: 'super-matte' },
+  { material: 'acrylic', shade: 'frosty-white', finish: 'gloss' },
+  { material: 'laminate', shade: 'graphite', finish: 'super-matte' },
+  { material: 'wood-laminate', shade: 'light-oak', finish: 'matte' },
+  { material: 'veneer', shade: 'walnut', finish: 'open-pore' },
+  { material: 'pu', shade: 'navy', finish: 'satin' },
+  { material: 'laminate', shade: 'cashmere', finish: 'matte' },
+  { material: 'glass', shade: 'fluted', finish: 'black', label: 'Fluted glass in black profile' },
+];
+
+const UPHOLSTERY_SUGGEST: Suggestion[] = [
+  { material: 'fabric', shade: 'oatmeal' },
+  { material: 'boucle', shade: 'ivory' },
+  { material: 'velvet', shade: 'emerald' },
+  { material: 'leather', shade: 'tan' },
+  { material: 'velvet', shade: 'navy' },
+  { material: 'fabric', shade: 'charcoal' },
+  { material: 'veneer', shade: 'walnut', finish: 'open-pore' },
+  { material: 'wood-laminate', shade: 'light-oak', finish: 'matte' },
+];
+
+/** Element id -> suggestions. Ones whose material the part does not have are skipped. */
+const SUGGESTIONS: Record<string, Suggestion[]> = {
+  handles: [
+    { material: 'gola', shade: 'matte-black', label: 'Matte black G-profile (handleless)' },
+    { material: 'bar', shade: 'brushed-gold', label: 'Brushed gold slim bar handles' },
+    { material: 'bar', shade: 'matte-black', label: 'Matte black slim bar handles' },
+    { material: 'edge', shade: 'brushed-steel', label: 'Brushed steel edge profile' },
+    { material: 'knob', shade: 'antique-brass', label: 'Antique brass knobs' },
+    { material: 'push', label: 'No handles (push-to-open)' },
+  ],
+  countertop: [
+    { material: 'quartz', shade: 'calacatta', finish: 'polished' },
+    { material: 'granite', shade: 'black-galaxy', finish: 'polished' },
+    { material: 'granite', shade: 'absolute-black', finish: 'leathered' },
+    { material: 'quartz', shade: 'pure-white', finish: 'polished' },
+    { material: 'marble', shade: 'statuario', finish: 'polished' },
+    { material: 'sintered', shade: 'nero', finish: 'honed' },
+    { material: 'quartz', shade: 'concrete', finish: 'honed' },
+    { material: 'wood', shade: 'light-oak' },
+  ],
+  backsplash: [
+    { material: 'slab', shade: 'calacatta', finish: 'polished' },
+    { material: 'subway', shade: 'frosty-white', finish: 'gloss' },
+    { material: 'zellige', shade: 'sage' },
+    { material: 'pattern', shade: 'moroccan' },
+    { material: 'glass', shade: 'graphite' },
+    { material: 'subway', shade: 'forest', finish: 'gloss' },
+  ],
+  'wall-tiles': [
+    { material: 'large', shade: 'statuario', finish: 'gloss' },
+    { material: 'large', shade: 'concrete', finish: 'matte' },
+    { material: 'subway', shade: 'frosty-white', finish: 'gloss' },
+    { material: 'pattern', shade: 'terrazzo' },
+    { material: 'pattern', shade: 'hexagon' },
+    { material: 'subway', shade: 'sage', finish: 'matte' },
+  ],
+  walls: [
+    { material: 'emulsion', shade: 'ivory', finish: 'matte' },
+    { material: 'emulsion', shade: 'greige', finish: 'eggshell' },
+    { material: 'emulsion', shade: 'sage', finish: 'matte' },
+    { material: 'emulsion', shade: 'powder-blue', finish: 'matte' },
+    { material: 'limewash', shade: 'terracotta' },
+    { material: 'texture', shade: 'cashmere' },
+  ],
+  'feature-wall': [
+    { material: 'fluted', shade: 'walnut' },
+    { material: 'panelling', shade: 'sage' },
+    { material: 'wallpaper', shade: 'linen' },
+    { material: 'stone', shade: 'white-brick' },
+    { material: 'stone', shade: 'slate' },
+    { material: 'jaali', shade: 'gold' },
+  ],
+  floor: [
+    { material: 'vitrified', shade: 'marble-look', finish: 'gloss' },
+    { material: 'wood', shade: 'light-oak', finish: 'herringbone', label: 'Light oak wooden floor, herringbone' },
+    { material: 'wood', shade: 'natural-teak', finish: 'planks', label: 'Natural teak wooden floor, straight planks' },
+    { material: 'marble', shade: 'italian-white' },
+    { material: 'vitrified', shade: 'grey', finish: 'matte' },
+    { material: 'kota', shade: 'blue' },
+  ],
+  ceiling: [{ material: 'cove' }, { material: 'peripheral' }, { material: 'slats' }, { material: 'plain' }],
+  bed: UPHOLSTERY_SUGGEST,
+  sofa: UPHOLSTERY_SUGGEST,
+};
+
+const lowerFirst = (s: string) => (/^[A-Z][a-z]/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s);
+
+/** The ready-made changes for one part, as clickable prompts: "Sage green laminate, super-matte". */
+export function suggestionsFor(element: RoomElement): { selection: Selection; label: string; hex?: string }[] {
+  const list = SUGGESTIONS[element.id] ?? (element.materials.includes(SHUTTER_MATERIALS[0]) ? SHUTTER_SUGGEST : undefined);
+  // Parts without a list get the first shade of each material.
+  const items: Suggestion[] = list ?? element.materials.map((m) => ({ material: m.id, shade: m.shades?.[0]?.id, finish: m.finishes?.[0]?.id }));
+  return items.flatMap(({ label, ...selection }) => {
+    const r = resolveSelection(element, selection);
+    // Skip suggestions this part can't take (a material or shade it does not have).
+    if (!r || (selection.shade && !r.shade) || (selection.finish && !r.finish)) return [];
+    const name = r.shade ? `${r.shade.label} ${lowerFirst(r.material.label)}` : r.material.label;
+    return [{ selection, label: label ?? (r.finish ? `${name}, ${lowerFirst(r.finish.label)}` : name), hex: r.shade?.hex }];
+  });
+}
+
+// ---------------------------------------------------------------- Standard mode: light and extras
 
 export const MOODS: Choice[] = [
   { id: '', label: 'As in image', prompt: '' },
@@ -465,14 +598,19 @@ export const ADDON_SECTIONS = [
 
 export const MAX_VARIANTS = 4;
 export const NOTES_MAX = 300;
+/** The most a prompt bar takes: details for a part, or a Mark & edit change in staff's own words. */
+export const INSTRUCTION_MAX = 160;
+
+/** Prompt-bar text as it goes to the AI: one line, no stray spaces, within the limit. */
+export const cleanText = (s: string | undefined, max = INSTRUCTION_MAX) => (s ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
+
+// ---------------------------------------------------------------- reading a selection
 
 export function appliesTo(item: { rooms?: readonly RoomTypeId[] }, room: RoomTypeId): boolean {
   return !item.rooms || item.rooms.includes(room);
 }
 
 export const elementsFor = (room: RoomTypeId) => ELEMENTS.filter((e) => appliesTo(e, room));
-
-// ---------------------------------------------------------------- reading a selection
 
 export interface ResolvedSelection {
   element: RoomElement;
@@ -484,6 +622,7 @@ export interface ResolvedSelection {
   /** Data URL of the material sample photo, for materials that have shades. */
   sample?: string;
   area?: Point;
+  details?: string;
 }
 
 const inUnit = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 1;
@@ -502,6 +641,7 @@ export function resolveSelection(element: RoomElement, sel: Selection): Resolved
     // A sample stands in for a shade, so only materials that have shades take one.
     sample: material.shades && sel.sample ? sel.sample : undefined,
     area: sel.area && inUnit(sel.area.x) && inUnit(sel.area.y) ? { x: sel.area.x, y: sel.area.y } : undefined,
+    details: cleanText(sel.details) || undefined,
   };
 }
 
@@ -519,7 +659,7 @@ export function areaLabel(p: Point): string {
   return AREA_NAMES[band(p.y)][band(p.x)];
 }
 
-/** The area in words for the AI. There is no mask in the edit API, so position is the only way to point at a part. */
+/** A picked point in words for the AI (Standard mode). */
 export function describeArea(p: Point): string {
   const pct = (n: number) => Math.round(n * 100);
   return `${areaLabel(p)} of the image (about ${pct(p.x)}% from the left and ${pct(p.y)}% from the top)`;
@@ -533,17 +673,14 @@ export function describeSelection(r: ResolvedSelection): { value: string; hex?: 
     r.finish?.label,
     r.profile?.label,
     r.area && `at ${areaLabel(r.area)}`,
+    r.details && `“${r.details.length > 40 ? `${r.details.slice(0, 38).trimEnd()}…` : r.details}”`,
   ].filter(Boolean);
   return { value: parts.join(' · '), hex: r.sample ? undefined : (r.colour ?? r.shade?.hex) };
 }
 
-/**
- * The instruction sent to the AI for one changed element.
- * `sampleRef` is how the prompt names the sample image, e.g. "<IMAGE_1>" (it depends on the AI provider).
- */
-export function selectionPrompt(r: ResolvedSelection, sampleRef?: string): string {
-  const sample = r.sample && sampleRef;
-  const shade = sample
+/** The material and shade in words: "sage green (#9AA98F) laminate". Without the shade when a sample photo stands in for it. */
+function materialWords(r: ResolvedSelection, fromSample = false): string {
+  const shade = fromSample
     ? ''
     : r.colour
       ? `a custom colour ${r.colour} (${describeHex(r.colour)})`
@@ -553,15 +690,56 @@ export function selectionPrompt(r: ResolvedSelection, sampleRef?: string): strin
           : words(r.shade)
         : '';
   const noun = r.material.prompt;
-  let what = noun.includes('{shade}')
+  return noun.includes('{shade}')
     ? noun.replace('{shade}', shade).replace(/\s+/g, ' ').trim()
     : !shade
       ? noun
       : r.material.custom
         ? `${shade} ${noun}`
         : `${noun} in ${shade}`;
+}
+
+/** Mark & edit: the new finish in words, "sage green (#9AA98F) laminate, with a matte finish". Details are added separately. */
+export function finishPrompt(r: ResolvedSelection): string {
+  const what = materialWords(r);
+  return r.finish ? `${what}, ${words(r.finish)}` : what;
+}
+
+/** Staff's details as a sentence for the prompt: "Details: fluted grooves about 2 cm apart." */
+export const detailsSentence = (details: string | undefined) => (details ? `Details: ${details.replace(/[.\s]+$/, '')}.` : '');
+
+/**
+ * Standard mode: the instruction for one changed part of the room.
+ * `sampleRef` is how the prompt names the sample image, e.g. "<IMAGE_1>" (it depends on the AI provider).
+ */
+export function selectionPrompt(r: ResolvedSelection, sampleRef?: string): string {
+  const sample = r.sample && sampleRef;
+  let what = materialWords(r, Boolean(sample));
   if (sample) what += ` that exactly matches the material sample in ${sampleRef}: the same colour, pattern, grain direction and texture, at a true-to-life scale`;
   const tail = [r.profile && words(r.profile), r.finish && words(r.finish)].filter(Boolean).join(', ');
   const target = r.area ? `${r.element.noun} located at the ${describeArea(r.area)}, and only those,` : r.element.noun;
-  return `Change ${target} to ${what}${tail ? `, ${tail}` : ''}.`;
+  return [`Change ${target} to ${what}${tail ? `, ${tail}` : ''}.`, detailsSentence(r.details)].filter(Boolean).join(' ');
+}
+
+/**
+ * Where the marked area is, in words: "lower left part of the photo (about 5–48% from
+ * the left, 55–100% from the top)". The edit API takes no mask, so this is how the AI
+ * is pointed at the part. Empty when the mark covers most of the photo.
+ */
+export function describeBox(b: Box): string {
+  if (b.w > 0.75 && b.h > 0.75) return '';
+  // Which third the centre is in, or null when the box spans most of that direction.
+  const band = (start: number, size: number) => {
+    if (size > 0.66) return null;
+    const centre = start + size / 2;
+    return centre < 1 / 3 ? 0 : centre > 2 / 3 ? 2 : 1;
+  };
+  const v = band(b.y, b.h);
+  const h = band(b.x, b.w);
+  const name =
+    [v === null ? '' : ['upper', '', 'lower'][v], h === null ? '' : ['left', '', 'right'][h]].filter(Boolean).join(' ') ||
+    (v === 1 || h === 1 ? 'centre' : '');
+  const pct = (n: number) => Math.round(Math.min(1, Math.max(0, n)) * 100);
+  const range = `about ${pct(b.x)}–${pct(b.x + b.w)}% from the left and ${pct(b.y)}–${pct(b.y + b.h)}% from the top`;
+  return name ? `${name} part of the photo (${range})` : `area ${range}`;
 }

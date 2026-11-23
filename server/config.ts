@@ -20,4 +20,6 @@ export const config = {
   distDir: path.join(root, 'client', 'dist'),
   /** Max generated images per visitor IP per hour. Replaced by per-staff daily limits in Phase 2. */
   imagesPerHour: Number(env.IMAGES_PER_HOUR || 40),
+  /** Max "AI help" requests (prompt-bar suggestions) per visitor IP per hour. Each costs about $0.001. */
+  assistsPerHour: Number(env.ASSISTS_PER_HOUR || 200),
 } as const;
