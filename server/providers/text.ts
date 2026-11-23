@@ -15,31 +15,76 @@ interface ChatResponse {
   error?: { message?: string } | string;
 }
 
-/** xAI's OpenAI-compatible chat endpoint. Model ids: docs.x.ai/developers/models. */
+// Text models to fall back on, cheapest and fastest first. Which ones a key can use
+// depends on its xAI team (the production key's team had no grok-4.20 on 23 Nov 2026).
+const XAI_FALLBACKS = [
+  'grok-4.20-0309-non-reasoning',
+  'grok-4.3',
+  'grok-4-1-fast-non-reasoning',
+  'grok-4-fast-non-reasoning',
+  'grok-4.5',
+  'grok-4.6',
+  'grok-4.7',
+  'grok-4',
+  'grok-3-mini',
+];
+
+/** "model does not exist or your team does not have access to it" */
+const isModelMissing = (err: unknown) => err instanceof ProviderError && (err.status === 404 || (err.status === 400 && /model/i.test(err.message)));
+
+/**
+ * xAI's OpenAI-compatible chat endpoint. Model ids: docs.x.ai/developers/models.
+ * If the configured model is refused, the next ones in XAI_FALLBACKS are tried and
+ * the first that answers is kept for the life of the server.
+ */
 export function createXaiText(apiKey: string, model: string): TextProvider {
+  let current = model;
+  let settled = false;
+
+  async function chat(name: string, system: string, user: string, signal?: AbortSignal): Promise<string> {
+    const response = await fetch('https://api.x.ai/v1/chat/completions', {
+      method: 'POST',
+      signal,
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: name,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: user },
+        ],
+        temperature: 0.4,
+        max_tokens: 400,
+      }),
+    });
+    const json = (await response.json().catch(() => ({}))) as ChatResponse;
+    if (!response.ok) {
+      const detail = typeof json.error === 'string' ? json.error : json.error?.message;
+      throw new ProviderError(`xAI ${response.status}: ${detail ?? response.statusText}`, response.status);
+    }
+    return json.choices?.[0]?.message?.content ?? '';
+  }
+
   return {
-    name: `xai:${model}`,
+    get name() {
+      return `xai:${current}`;
+    },
     async complete(system, user, signal) {
-      const response = await fetch('https://api.x.ai/v1/chat/completions', {
-        method: 'POST',
-        signal,
-        headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: 'system', content: system },
-            { role: 'user', content: user },
-          ],
-          temperature: 0.4,
-          max_tokens: 400,
-        }),
-      });
-      const json = (await response.json().catch(() => ({}))) as ChatResponse;
-      if (!response.ok) {
-        const detail = typeof json.error === 'string' ? json.error : json.error?.message;
-        throw new ProviderError(`xAI ${response.status}: ${detail ?? response.statusText}`, response.status);
+      if (settled) return chat(current, system, user, signal);
+      const candidates = [model, ...XAI_FALLBACKS.filter((m) => m !== model)];
+      let lastError: unknown;
+      for (const name of candidates) {
+        try {
+          const text = await chat(name, system, user, signal);
+          if (name !== model) console.warn(`[assist] ${model} is not available to this xAI key; using ${name}. Set XAI_TEXT_MODEL=${name} to skip the search.`);
+          current = name;
+          settled = true;
+          return text;
+        } catch (err) {
+          if (!isModelMissing(err)) throw err;
+          lastError = err;
+        }
       }
-      return json.choices?.[0]?.message?.content ?? '';
+      throw lastError;
     },
   };
 }
