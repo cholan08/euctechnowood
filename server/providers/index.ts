@@ -1,4 +1,5 @@
 import { createGeminiProvider } from './gemini';
+import { createGeminiText, createXaiText, type TextProvider } from './text';
 import type { ImageEditProvider } from './types';
 import { createXaiProvider } from './xai';
 
@@ -12,11 +13,31 @@ const mockProvider: ImageEditProvider = {
   },
 };
 
+/** Which service to use: IMAGE_PROVIDER, or whichever key is set. */
+function providerName(): string {
+  const env = process.env;
+  const fallback = env.XAI_API_KEY ? 'xai' : env.GEMINI_API_KEY ? 'gemini' : 'mock';
+  return (env.IMAGE_PROVIDER || fallback).toLowerCase();
+}
+
+/**
+ * The text model behind "AI help" in the prompt bars, from the same service as the
+ * images. Null in mock mode: the server then answers with simple built-in suggestions.
+ */
+export function getTextProvider(): TextProvider | null {
+  const env = process.env;
+  const name = providerName();
+  if (name === 'xai' && env.XAI_API_KEY) return createXaiText(env.XAI_API_KEY, env.XAI_TEXT_MODEL || 'grok-4.20-0309-non-reasoning');
+  if (name === 'gemini' && env.GEMINI_API_KEY) {
+    return createGeminiText(env.GEMINI_API_KEY, env.GEMINI_TEXT_MODEL || 'gemini-3.5-flash-lite', env.GEMINI_API_VERSION || 'v1');
+  }
+  return null;
+}
+
 /** Reads the environment when called, so call it after config has loaded .env. */
 export function getProvider(): ImageEditProvider {
   const env = process.env;
-  const fallback = env.XAI_API_KEY ? 'xai' : env.GEMINI_API_KEY ? 'gemini' : 'mock';
-  const name = (env.IMAGE_PROVIDER || fallback).toLowerCase();
+  const name = providerName();
 
   switch (name) {
     case 'xai': {

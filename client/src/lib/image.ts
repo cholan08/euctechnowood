@@ -10,8 +10,11 @@ export interface PreparedImage {
 const MAX_SIDE = 1536;
 const ACCEPTED = /^image\/(jpeg|png|webp)$/;
 
-/** Material sample photos only need to show colour, pattern and grain. */
+/** Material sample photos (Standard mode) only need to show colour, pattern and grain. */
 export const SAMPLE_MAX_SIDE = 768;
+
+/** Item photos (Mark & edit: "put this sofa here") keep a little more detail. */
+export const ITEM_MAX_SIDE = 1024;
 
 export async function prepareImage(file: File, maxSide = MAX_SIDE): Promise<PreparedImage> {
   if (/heic|heif/i.test(file.type) || /\.(heic|heif)$/i.test(file.name)) {
@@ -43,10 +46,14 @@ export async function prepareImage(file: File, maxSide = MAX_SIDE): Promise<Prep
   return { dataUrl: canvas.toDataURL('image/jpeg', 0.9), width, height, name: file.name };
 }
 
-/** Downloads a generated design so it can become the starting photo of the next edit. */
-export async function fileFromUrl(url: string, name: string): Promise<File> {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error('Could not load the generated image.');
-  const blob = await response.blob();
-  return new File([blob], name, { type: blob.type || 'image/jpeg' });
+/** Reads any image URL (blob: or data:) as a data URL, the form the API accepts. */
+export async function toDataUrl(url: string): Promise<string> {
+  if (url.startsWith('data:')) return url;
+  const blob = await (await fetch(url)).blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error('Could not read the image.'));
+    reader.readAsDataURL(blob);
+  });
 }

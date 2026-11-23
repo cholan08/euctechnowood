@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { areaLabel, describeSelection, resolveSelection, type Material, type RoomElement, type Selection } from '../../../../shared/catalog';
+import { INSTRUCTION_MAX, areaLabel, describeSelection, resolveSelection, type Material, type RoomElement, type RoomTypeId, type Selection } from '../../../../shared/catalog';
 import { isHex } from '../../../../shared/colour';
 import { prepareImage, SAMPLE_MAX_SIDE } from '../../lib/image';
 import { FileDrop } from '../ui/FileDrop';
 import { Icon } from '../ui/Icon';
+import { PromptBar } from './PromptBar';
 
 interface Props {
+  roomType: RoomTypeId;
   element: RoomElement;
   value: Selection | undefined;
   open: boolean;
@@ -27,7 +29,7 @@ interface Props {
  * One part of the room. Collapsed it reads "Locked · as in image" or its spec;
  * open it is a spec editor: material, shade or custom colour, sheen, shutter design.
  */
-export function ElementEditor({ element, value, open, onToggle, onChange, siblings, onApplyAll, onPickArea, picking, canAddSample }: Props) {
+export function ElementEditor({ roomType, element, value, open, onToggle, onChange, siblings, onApplyAll, onPickArea, picking, canAddSample }: Props) {
   const resolved = value ? resolveSelection(element, value) : null;
   const spec = resolved ? describeSelection(resolved) : null;
   const material = resolved?.material;
@@ -44,6 +46,7 @@ export function ElementEditor({ element, value, open, onToggle, onChange, siblin
       profile: value?.profile,
       sample: m.shades ? value?.sample : undefined,
       area: value?.area,
+      details: value?.details,
     });
   }
 
@@ -141,6 +144,23 @@ export function ElementEditor({ element, value, open, onToggle, onChange, siblin
           )}
 
           {material?.shades && <SampleField sample={value?.sample} canAdd={canAddSample} onSample={(sample) => set({ sample })} />}
+
+          {material && (
+            <div className="field">
+              <label className="field-label" htmlFor={`${bodyId}-details`}>
+                Details <i>optional · any language</i>
+              </label>
+              <PromptBar
+                id={`${bodyId}-details`}
+                label={`Details for the ${element.label.toLowerCase()}`}
+                value={value?.details ?? ''}
+                onChange={(details) => set({ details })}
+                placeholder='e.g. "fluted grooves, gold edge on top"'
+                maxLength={INSTRUCTION_MAX}
+                context={{ kind: 'details', roomType, part: element.id, finish: value }}
+              />
+            </div>
+          )}
 
           {material && (
             <div className="field">

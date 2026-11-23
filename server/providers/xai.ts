@@ -33,7 +33,8 @@ export function createXaiProvider(config: XaiConfig): ImageEditProvider {
         method: 'POST',
         signal,
         headers: { 'content-type': 'application/json', authorization: `Bearer ${config.apiKey}` },
-        body: JSON.stringify({ model: config.model, prompt: input.prompt, ...images }),
+        // `resolution` is "1k" (default) or "2k"; both cost the same per image (docs.x.ai pricing, Nov 2026).
+        body: JSON.stringify({ model: config.model, prompt: input.prompt, ...images, ...(input.resolution && { resolution: input.resolution }) }),
       });
 
       const json = (await response.json().catch(() => ({}))) as EditResponse;

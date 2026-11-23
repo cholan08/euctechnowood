@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { ADDONS, ADDON_SECTIONS, MAX_SAMPLES, MAX_VARIANTS, MOODS, NOTES_MAX, appliesTo, elementsFor, type ElementGroup, type Selection } from '../../../../shared/catalog';
+import { ADDONS, ADDON_SECTIONS, MAX_SAMPLES, MAX_VARIANTS, MOODS, NOTES_MAX, appliesTo, elementsFor, type ElementGroup, type RoomTypeId, type Selection } from '../../../../shared/catalog';
 import type { DesignSpec } from '../../../../shared/types';
 import { countVariant, emptyVariant, letter, renumber, type DesignState } from '../../lib/design';
 import { Icon } from '../ui/Icon';
 import { ElementEditor } from './ElementEditor';
+import { PromptBar } from './PromptBar';
 
 interface Props {
+  roomType: RoomTypeId;
   value: DesignState;
   onChange: (next: DesignState) => void;
   active: number;
@@ -18,16 +20,16 @@ interface Props {
 type Tab = ElementGroup | 'extras';
 
 /**
- * The spec editor. The customer's image is the design, so nothing here restyles
- * the room: each part is locked to the original until it is given a new spec.
- * Options A–D are alternative specs of the same room, one image each.
+ * Standard mode: the spec editor. The customer's image is the design, so nothing
+ * here restyles the room: each part is locked to the original until it is given a
+ * new spec. Options A–D are alternative specs of the same room, one image each.
  */
-export function DesignPanel({ value, onChange, active, onActive, picking, onPickArea }: Props) {
+export function DesignPanel({ roomType, value, onChange, active, onActive, picking, onPickArea }: Props) {
   const [tab, setTab] = useState<Tab>('cabinetry');
   const [open, setOpen] = useState<string | null>(null);
   const variant = value.variants[active] ?? value.variants[0];
-  const elements = elementsFor(value.roomType);
-  const count = countVariant(variant, value.roomType);
+  const elements = elementsFor(roomType);
+  const count = countVariant(variant, roomType);
 
   const setVariants = (variants: DesignSpec[]) => onChange({ ...value, variants });
   const setVariant = (patch: Partial<DesignSpec>) => setVariants(value.variants.map((v, i) => (i === active ? { ...v, ...patch } : v)));
@@ -71,7 +73,7 @@ export function DesignPanel({ value, onChange, active, onActive, picking, onPick
     <>
       <div className="variants" aria-label="Design options">
         {value.variants.map((v, i) => {
-          const c = countVariant(v, value.roomType);
+          const c = countVariant(v, roomType);
           return (
             <div key={i} className={`variant${i === active ? ' on' : ''}`}>
               <button type="button" className="variant-pick" aria-pressed={i === active} onClick={() => onActive(i)} title={`${v.name}: ${c.total} changes`}>
@@ -134,6 +136,7 @@ export function DesignPanel({ value, onChange, active, onActive, picking, onPick
                 .map((e) => (
                   <ElementEditor
                     key={`${active}-${e.id}`}
+                    roomType={roomType}
                     element={e}
                     value={variant.elements[e.id]}
                     open={open === e.id}
@@ -149,14 +152,14 @@ export function DesignPanel({ value, onChange, active, onActive, picking, onPick
             </div>
           </>
         ) : (
-          <Extras variant={variant} room={value.roomType} onChange={setVariant} />
+          <Extras variant={variant} room={roomType} onChange={setVariant} />
         )}
       </div>
     </>
   );
 }
 
-function Extras({ variant, room, onChange }: { variant: DesignSpec; room: DesignState['roomType']; onChange: (p: Partial<DesignSpec>) => void }) {
+function Extras({ variant, room, onChange }: { variant: DesignSpec; room: RoomTypeId; onChange: (p: Partial<DesignSpec>) => void }) {
   const toggle = (id: string) =>
     onChange({ addons: variant.addons.includes(id) ? variant.addons.filter((a) => a !== id) : [...variant.addons, id] });
 
@@ -195,19 +198,24 @@ function Extras({ variant, room, onChange }: { variant: DesignSpec; room: Design
         );
       })}
 
-      <label className="notes">
-        <span className="field-label">Designer's note · optional</span>
-        <textarea
-          rows={3}
-          maxLength={NOTES_MAX}
-          placeholder="e.g. make the hob wall a slightly darker shade than the rest"
+      <div className="notes">
+        <label className="field-label" htmlFor="designer-note">
+          Designer's note <i>optional · any language</i>
+          <span className="notes-count">
+            {variant.notes.length} / {NOTES_MAX}
+          </span>
+        </label>
+        <PromptBar
+          id="designer-note"
+          label="Designer's note"
+          multiline
           value={variant.notes}
-          onChange={(e) => onChange({ notes: e.target.value })}
+          onChange={(notes) => onChange({ notes })}
+          placeholder="e.g. make the hob wall a slightly darker shade than the rest"
+          maxLength={NOTES_MAX}
+          context={{ kind: 'note', roomType: room }}
         />
-        <span className="notes-count">
-          {variant.notes.length} / {NOTES_MAX}
-        </span>
-      </label>
+      </div>
     </>
   );
 }

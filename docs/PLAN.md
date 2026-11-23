@@ -6,7 +6,7 @@ Updated: 20 Nov 2026. Starting point: the working MVP in this repo (one-screen s
 
 ## 1. What we are building
 
-An **internal design tool for EUC Technowood's staff**. During EUC's paid design process (the customer pays a design amount before the project starts), a staff member uploads the customer's room photo or a Cabinet Vision render. The customer's image is treated as the approved layout: staff change only finishes, part by part (shutters, countertop, handles, floor...), with up to four options (A–D) side by side. They compare before and after and **download** the designs to share with the customer.
+An **internal design tool for EUC Technowood's staff**. During EUC's paid design process (the customer pays a design amount before the project starts), a staff member uploads the customer's room photo or a Cabinet Vision render. The customer's image is treated as the approved layout: staff change finishes in one of two ways. **Mark & edit**: pick the part, mark it on the photo, click a suggested change; only the marked area changes and the rest stays the original photo. **Standard**: a spec for the whole room with options A–D, which the AI redraws as a whole. Both stack into one list of changes. At the end a **Final 2K** pass makes the image photographic at 2K. They compare before and after and **download** the result to share with the customer.
 
 **Scope decisions (agreed):**
 
@@ -76,7 +76,7 @@ An **internal design tool for EUC Technowood's staff**. During EUC's paid design
 users       id, name, email, password_hash, role (admin | staff), daily_limit, active, created_at, last_login_at
 sessions    id (random), user_id, expires_at, created_at
 usage_log   id, user_id, created_at, customer_label (optional, typed by staff),
-            room_type, source (photo | render), option_name, spec (json: element selections, add-ons, mood, note),
+            room_type, kind (mark | standard | final), part, finish or spec (json), marked_share (0–1), images,
             provider, model, status (ok | failed | blocked), error, latency_ms, est_cost_paise
 ```
 
@@ -93,7 +93,7 @@ Estimates are for **one developer**.
 - [ ] Remove the quote modal, leads routes, leads admin, `designs` / `leads` tables, image saving and `/uploads`
 - [ ] `/api/redesign` returns each design as a data URL; Download and Refine work from that
 - [ ] "Leave page?" warning when there are designs not yet downloaded
-- [ ] **Download all**: save every design in one click
+- [x] ~~**Download all**~~: not needed; options A–D are switched in place and the chosen one is downloaded
 - [ ] Switch to `better-sqlite3`; add `zod` validation
 - [ ] Update the UI test suite to the new flow
 
@@ -115,10 +115,14 @@ Estimates are for **one developer**.
 
 - [ ] **Test set:** 20–30 real EUC photos and Cabinet Vision renders; score structure kept, changes applied and realism
 - [x] **Layout fidelity:** whole-room styles removed (Japandi moved the island and added a window). Replaced by a per-part spec editor: every part not changed is listed in the prompt as "keep exactly"; layout rules forbid moving, adding or removing anything.
+- [x] **One change at a time, manual marking (23 Nov 2026).** EUC's client and manager found the spec editor too advanced, and prompts alone still let the AI drift from the real photo. Now: pick part → pick finish → mark it on the photo (brush / corners / eraser) → apply. The browser pastes back only the marked area of the AI image, lined up and exposure-matched (`client/src/lib/composite.ts`), so everything else stays the original pixels. Changes stack with Undo and Try again. Removed: options A–D, lighting moods, staging add-ons, notes, sample photos, shutter designs and the CV-render mode.
+- [x] **Two modes + Final 2K (23 Nov 2026).** The user asked for both ways of working, so staff can pick: **Mark & edit** (after marking, the part's suggested changes show as clickable prompts; custom finish and own words also work) and **Standard** (the earlier spec editor with options A–D, moods, add-ons, samples, notes, CV render). Both stack into one list of changes with Undo / Try again. **Final 2K image**: one realism pass over the whole image with xAI `resolution: "2k"` (same $0.04 per image; returned 2912×1456 PNG, ~26 s), lined up and cut to the photo's shape in the browser, shown beside the edited image before download.
+- [x] **Prompt bars with AI help (23 Nov 2026).** Every customise option has a prompt bar for details in staff's own words (Custom finish and each Standard part → `Selection.details`; own-words change; designer's note). **AI help** calls a text model (`grok-4.20-0309-non-reasoning`, `XAI_TEXT_MODEL`; ~1 s, ~$0.001) via `POST /api/assist` and returns three clear English options; it understands Tamil / Tanglish (tested: "konjam fluted design venum, top la gold line podunga"). Empty bar = ideas for that part and finish. Mock mode answers with built-in suggestions.
+- [x] **Item from a photo (23 Nov 2026).** Staff asked to put a sofa from another photo into the room; the studio could only send the room photo, so the AI never saw the sofa. Mark & edit now takes an **Item photo** (attach, drop, or paste while an area is marked): both photos go to xAI as a multi-image edit (`<IMAGE_0>` room, `<IMAGE_1>` item) and only the marked area is pasted back. Not yet tried with a real sofa photo.
 - [ ] Replace the generic shades in `shared/catalog.ts` with EUC's real laminate / quartz / handle catalogue (shade names and codes)
 - [ ] Notes box: hint ("people, text and logos are not added") and tap-to-add example prompts
 - [ ] Optional "Customer / project" field in the studio bar, saved to the usage log
-- [ ] **Presentation download:** a before/after image with the EUC logo, the option's spec sheet and date, generated in the browser and ready to send to the customer
+- [ ] **Presentation download:** a before/after image with the EUC logo, the list of changes and date, generated in the browser and ready to send to the customer
 - [ ] Retry button on a failed design; automatic fallback to Gemini if xAI fails (needs a Gemini key)
 
 ### Phase 4: Deployment (2–3 days)
@@ -135,7 +139,7 @@ Estimates are for **one developer**.
 ### Phase 5: Handover (1–2 days)
 
 - [ ] Staging check with 2–3 EUC staff on real customer photos; fix what they find
-- [ ] One-page staff guide: good photos, locking vs changing parts, options A–D, refine, download
+- [ ] One-page staff guide: good photos, Mark & edit vs Standard, marking a part well (brush vs corners), undo and try again, Final 2K, download
 - [ ] Admin guide: adding staff, reading usage, what to do if the AI fails
 - [ ] Runbook: deploy, roll back, restore backup, rotate the AI key
 - [ ] Hand over all accounts and credentials to EUC (VPS, xAI, domain DNS, GitHub)
@@ -173,7 +177,8 @@ EUC's xAI account and billing should be **in EUC's name**, so AI cost goes strai
 | Risk | Mitigation |
 | --- | --- |
 | AI changes the room or the cabinet layout | Test set + render prompt fix in Phase 3; staff can refine or regenerate |
-| Staff lose designs on refresh (nothing stored) | "Leave page?" warning, Download all, presentation download |
+| Staff lose designs on refresh (nothing stored) | "Leave page?" warning, presentation download |
+| Final 2K response is large (~6 MB JSON for a 4.7 MB PNG) through the Vercel → Render proxy | Check one real Final 2K on the deployed site; if it fails, return xAI's image URL or convert to JPEG on the server |
 | AI provider down or slow | Gemini fallback; clear error with Retry |
 | Unexpected AI bill | Per-user daily limit, spending cap in the xAI console, usage page |
 | Customer photos leave EUC | Photos are not stored by us, but they are sent to xAI for processing. Tell EUC this and review xAI's data-retention terms |

@@ -2,7 +2,7 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { config } from './config';
-import { redesignRouter } from './routes/redesign';
+import { studioRouter } from './routes/studio';
 
 export function createApp() {
   const app = express();
@@ -16,7 +16,7 @@ export function createApp() {
     next();
   });
 
-  app.use('/api', redesignRouter);
+  app.use('/api', studioRouter);
   app.use('/api', (_req, res) => void res.status(404).json({ error: 'Not found.' }));
 
   // In production, serve the built frontend (npm run build) from the same server.

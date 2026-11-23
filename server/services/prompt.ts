@@ -1,7 +1,74 @@
-import { describeSelection, selectionPrompt } from '../../shared/catalog';
+import { describeBox, describeSelection, detailsSentence, finishPrompt, selectionPrompt } from '../../shared/catalog';
 import type { SpecLine } from '../../shared/types';
 import type { ImageData } from '../providers/types';
-import type { ParsedRequest, ParsedVariant } from './validate';
+import type { ParsedEdit, ParsedFinal, ParsedRedesign, ParsedVariant } from './validate';
+
+// Prompt shape follows xAI's edit guide (docs.x.ai, image prompting guide): lead
+// with the change, then ONE sentence that holds everything else fixed. Opening
+// with "keep everything" barely moves the image, and describing the whole scene
+// again restages it (things drift, duplicate or change type). Tune against real photos.
+
+/** "the wall cabinet shutters" without the explanations in brackets. */
+const shortNoun = (noun: string) => noun.replace(/\s*\([^)]*\)/g, '').trim();
+
+const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+const list = (items: string[]) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`);
+
+const NO_EXTRAS = 'no people, text, logos or watermarks';
+
+// ---------------------------------------------------------------- Mark & edit
+
+// One change, one short instruction. The browser pastes back ONLY the area staff
+// marked, so everything outside it stays the real photo whatever the AI does there.
+// The prompt's job is therefore narrow: make the change look right inside the
+// mark, and keep the camera exactly still so the pasted area lines up.
+const EDIT_FIT = `Fit the new material to the real edges of the part, with true-to-scale grain, veins and tile joints, realistic reflections and soft contact shadows that match the existing light. Photorealistic; ${NO_EXTRAS}.`;
+const EDIT_STILL = 'Leave everything else in the photo unchanged, with the same camera position, lens, perspective, framing and crop.';
+
+/** How the prompt names input image n (0 = the room photo). Comes from the AI provider. */
+export type ImageRef = (index: number) => string;
+
+export function buildEditPrompt({ room, element, change, text, reference, area }: ParsedEdit, ref: ImageRef): string {
+  const where = describeBox(area);
+  const intro = `Edit this photo of a ${room.label.toLowerCase()}.`;
+
+  // An item from another photo (a sofa, a chair, a light) put into the marked area.
+  if (reference) {
+    const item = element ? `the ${element.label.toLowerCase()}` : 'the item';
+    const room0 = ref(0);
+    const item1 = ref(1);
+    return [
+      `Edit ${room0}, a photo of a ${room.label.toLowerCase()}. Put ${item} shown in ${item1} into ${room0}, in the ${where || 'middle of the photo'}, replacing whatever is there now${text ? `. ${capitalise(text.replace(/[.\s]+$/, ''))}` : ''}.`,
+      `Copy it exactly from ${item1}: the same design, shape, proportions, colour, fabric or material and details. Take only the item itself, never the background, floor, walls, framing or lighting of ${item1}.`,
+      `Give it a realistic size for this room, resting naturally where it belongs (on the floor, a wall or the ceiling) in the correct perspective for ${room0}'s camera, and match the room's light direction, colour temperature and soft contact shadows.`,
+      `Leave everything else in ${room0} unchanged, with the same camera position, lens, perspective, framing and crop. Photorealistic; ${NO_EXTRAS}.`,
+    ].join('\n');
+  }
+
+  if (change) {
+    const el = change.element;
+    const lines = [[`${intro} Change ${el.noun}${where ? `, in the ${where},` : ''} to ${finishPrompt(change)}.`, detailsSentence(change.details)].filter(Boolean).join(' ')];
+    if (!el.reshape) {
+      lines.push(
+        `Keep ${shortNoun(el.noun)} exactly the same shape, size and outline${el.doors ? ', with every door and drawer line in the same place' : ''}; only the surface finish changes.`,
+      );
+    }
+    lines.push(EDIT_STILL, EDIT_FIT);
+    return lines.join('\n');
+  }
+
+  // Staff's own words. The part (if picked) and the area still point the AI at the right place.
+  const target = element ? `${element.noun}${where ? `, in the ${where}` : ''}` : where ? `the ${where}` : 'the photo';
+  return [
+    `${intro} For ${target}: ${text.replace(/[.\s]+$/, '')}.`,
+    element ? `Keep ${shortNoun(element.noun)} in the same place and at the same size.` : 'Keep the change inside that area.',
+    EDIT_STILL,
+    `Match the existing light, perspective and shadows. Photorealistic; ${NO_EXTRAS}.`,
+  ].join('\n');
+}
+
+// ---------------------------------------------------------------- Standard
 
 export interface Job {
   label: string;
@@ -11,20 +78,12 @@ export interface Job {
   references: ImageData[];
 }
 
-/** How the prompt names input image n (0 = the room photo). Comes from the AI provider. */
-export type ImageRef = (index: number) => string;
-
 // The customer's image IS the design: it is their real room, or the layout EUC
 // drew in Cabinet Vision. So this is an edit of finishes, never a redesign.
-//
-// Shape follows xAI's edit guide (docs.x.ai, image prompting guide): lead with
-// the changes, then ONE sentence that holds everything else fixed. Opening with
-// "keep everything" barely moves the image, and describing the whole scene again
-// restages it (things drift, duplicate or change type). Tune against real photos.
 const FIT =
   'Fit each new material to the real edges of its part, with true-to-scale grain, veins and tile joints, realistic reflections and soft contact shadows. Photorealistic, natural colours; no people, text, logos or watermarks.';
 
-export function buildJobs(request: ParsedRequest, ref: ImageRef): Job[] {
+export function buildJobs(request: ParsedRedesign, ref: ImageRef): Job[] {
   return request.variants.map((v) => ({
     label: v.name,
     prompt: composePrompt(request, v, ref),
@@ -41,21 +100,11 @@ function specSheet(v: ParsedVariant): SpecLine[] {
   return lines;
 }
 
-/** "the wall cabinet shutters" without the explanations in brackets, for the keep sentence. */
-const shortNoun = (noun: string) => noun.replace(/\s*\([^)]*\)/g, '').trim();
-
-const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-
-const list = (items: string[]) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`);
-
-function composePrompt(request: ParsedRequest, v: ParsedVariant, ref: ImageRef): string {
+function composePrompt(request: ParsedRedesign, v: ParsedVariant, ref: ImageRef): string {
   const room = request.room.label.toLowerCase();
   const sampleRef = (dataUrl: string) => ref(1 + v.samples.findIndex((s) => s.dataUrl === dataUrl));
 
-  const changes = [
-    ...v.changes.map((c) => selectionPrompt(c, c.sample ? sampleRef(c.sample) : undefined)),
-    ...v.addons.map((a) => a.prompt),
-  ];
+  const changes = [...v.changes.map((c) => selectionPrompt(c, c.sample ? sampleRef(c.sample) : undefined)), ...v.addons.map((a) => a.prompt)];
   if (v.mood?.prompt) changes.push(`Lighting: ${v.mood.prompt}`);
   if (v.notes) changes.push(`Designer's note: ${v.notes}`);
   const numbered = changes.map((c, i) => `${i + 1}. ${c}`);
@@ -88,4 +137,16 @@ function composePrompt(request: ParsedRequest, v: ParsedVariant, ref: ImageRef):
 
   lines.push('', FIT);
   return lines.join('\n');
+}
+
+// ---------------------------------------------------------------- Final 2K
+
+// The last step: the same image, sharper and more photographic. Nothing may move
+// or change material: the customer has already approved what is in it.
+export function buildFinalPrompt({ room }: ParsedFinal): string {
+  return [
+    `Make this image of a ${room.label.toLowerCase()} look like a high-resolution photograph taken by a professional interior photographer.`,
+    'Keep everything exactly as it is: the same layout, cabinets, furniture, appliances, objects and their positions, the same materials, colours, patterns and finishes, and the same camera position, lens, perspective, framing and crop.',
+    `Only improve the image quality: crisp fine detail, natural material textures and grain, clean straight edges where materials meet, realistic light, reflections and soft shadows. Do not add, remove or restyle anything; ${NO_EXTRAS}.`,
+  ].join('\n');
 }
