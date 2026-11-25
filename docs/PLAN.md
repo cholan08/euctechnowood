@@ -178,7 +178,7 @@ EUC's xAI account and billing should be **in EUC's name**, so AI cost goes strai
 | --- | --- |
 | AI changes the room or the cabinet layout | Test set + render prompt fix in Phase 3; staff can refine or regenerate |
 | Staff lose designs on refresh (nothing stored) | "Leave page?" warning, presentation download |
-| Final 2K response is large (~6 MB JSON for a 4.7 MB PNG) through the Vercel → Render proxy | Check one real Final 2K on the deployed site; if it fails, return xAI's image URL or convert to JPEG on the server |
+| Final 2K response is large (~6 MB JSON for a 4.7 MB PNG) through the proxy | Check one real Final 2K on the deployed site; if it fails, return xAI's image URL or convert to JPEG on the server |
 | AI provider down or slow | Gemini fallback; clear error with Retry |
 | Unexpected AI bill | Per-user daily limit, spending cap in the xAI console, usage page |
 | Customer photos leave EUC | Photos are not stored by us, but they are sent to xAI for processing. Tell EUC this and review xAI's data-retention terms |
