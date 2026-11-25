@@ -112,5 +112,6 @@ types) and `workspace.ts` (accounts, clients, projects, rooms, images: API shape
 
 ## Deployment today
 
-Vercel serves the built client and rewrites `/api/*` to the Render web service (`render.yaml`), which runs
-`npm start`. Locally and in the planned single-VPS setup, one Node process serves both `client/dist` and the API.
+One Render web service (`render.yaml`) builds the client and runs `npm start`, so a single Node process serves both
+`client/dist` and the API at https://euc.xenoware.in. Studio data lives in `DATA_DIR`, which must be a persistent disk
+(`/var/data`) in production.
