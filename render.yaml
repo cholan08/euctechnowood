@@ -7,11 +7,11 @@ projects:
       - name: production
         services:
           - type: web
-            name: euc-room-studio-api
+            name: euc-room-studio
             runtime: node
             plan: starter # persistent disks are not available on the free plan
             region: singapore
-            branch: phase-1-trim # switch to main once phase-1-trim is merged
+            branch: main
             # tsx (used by `npm start`) is a devDependency, and NODE_ENV=production
             # would otherwise make npm skip devDependencies. `npm run build` makes client/dist.
             buildCommand: npm ci --include=dev && npm run build
