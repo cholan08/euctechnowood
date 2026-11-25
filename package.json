@@ -3,14 +3,18 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Upload a room photo and see it redesigned in different styles (proof of concept for EUC Technowood).",
+  "description": "Dream Studios: AI interior design studio for EUC Technowood staff (clients, projects, generation, editing, presentation boards).",
   "scripts": {
     "dev": "concurrently -k -n api,web -c cyan,magenta \"npm:dev:api\" \"npm:dev:web\"",
-    "dev:api": "tsx watch server/index.ts",
+    "dev:api": "tsx watch --tsconfig server/tsconfig.json server/index.ts",
     "dev:web": "vite --config client/vite.config.ts",
     "typecheck": "tsc -p client && tsc -p server",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run typecheck && npm test",
     "build": "npm run typecheck && vite build --config client/vite.config.ts",
-    "start": "tsx server/index.ts"
+    "start": "tsx --tsconfig server/tsconfig.json server/index.ts",
+    "create-admin": "tsx --tsconfig server/tsconfig.json server/scripts/create-admin.ts"
   },
   "dependencies": {
     "express": "^5.3.0",
@@ -28,6 +32,7 @@
     "concurrently": "^10.0.7",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
-    "vite": "^8.3.8"
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1"
   }
 }

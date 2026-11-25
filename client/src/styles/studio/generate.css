@@ -1,0 +1,308 @@
+/* ---- Mark & edit: Change / Add / Remove ---- */
+.action-switch {
+  margin: 12px 16px 2px;
+}
+
+.step-opt {
+  margin-left: 6px;
+  color: var(--text-3);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 400;
+}
+
+/* ---- Generate: empty room → concepts ---- */
+.gen {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px 18px;
+}
+
+.gen-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.gen-note svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.gen-sec {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.gen-sec.open {
+  border-color: var(--line-strong);
+}
+
+.gen-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.gen-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.gen-value {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-3);
+  font-size: 12px;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gen-head > svg {
+  flex: none;
+  color: var(--text-3);
+  transition: transform 0.15s;
+}
+
+.gen-head[aria-expanded='true'] > svg {
+  transform: rotate(180deg);
+}
+
+.gen-body {
+  display: grid;
+  gap: 12px;
+  padding: 0 14px 14px;
+}
+
+.style-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.style-card {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.style-card:hover {
+  border-color: var(--line-hover);
+}
+
+.style-card[aria-checked='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.style-card strong {
+  font-size: 13px;
+}
+
+.style-card small {
+  color: var(--text-2);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.style-swatches,
+.palette-sw {
+  display: flex;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.style-swatches {
+  height: 10px;
+  margin-bottom: 4px;
+}
+
+.style-swatches span,
+.palette-sw span {
+  flex: 1;
+}
+
+.palette-list {
+  display: grid;
+  gap: 6px;
+}
+
+.palette {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 12px 0 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-2);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.palette:hover {
+  color: var(--text);
+}
+
+.palette.on {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.palette:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+}
+
+.palette > span:nth-of-type(2) {
+  flex: 1;
+}
+
+.palette-sw {
+  width: 64px;
+  height: 24px;
+  border: 1px solid rgb(0 0 0 / 8%);
+}
+
+.palette > svg {
+  color: var(--text-3);
+}
+
+.palette.on > svg {
+  color: var(--accent);
+}
+
+.variant-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid rgb(0 0 0 / 15%);
+}
+
+.ideas-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ideas-look {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.ideas-look b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.ideas {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ideas label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.ideas label.on {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+.ideas input {
+  margin-top: 3px;
+  accent-color: var(--accent);
+}
+
+.ideas span {
+  display: grid;
+  gap: 2px;
+}
+
+.ideas b {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.ideas small {
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+.add-row {
+  display: flex;
+  gap: 8px;
+}
+
+/* ---- Standard: start from a style ---- */
+.style-fill {
+  flex: none;
+  margin: 12px 16px 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.style-fill.open {
+  border-color: var(--line-strong);
+}
+
+.style-fill .custom-head {
+  white-space: nowrap;
+}
+
+.style-fill .custom-body {
+  display: grid;
+  gap: 10px;
+}
+
+.fill-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ---- Room studio: saving to the room ---- */
+.save-note.ok .dot {
+  background: var(--ok);
+}
+
+.save-note.bad {
+  color: var(--danger);
+}
+
+.save-note.bad .dot {
+  background: var(--danger);
+}

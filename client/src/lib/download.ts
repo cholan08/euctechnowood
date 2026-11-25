@@ -1,4 +1,4 @@
-import type { Variation } from '../../../shared/types';
+import type { Variation } from '@shared/types';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'room';

@@ -20,9 +20,16 @@ export interface EditRequest {
   text?: string;
   /** A photo of an item to put in the marked area (a sofa, chair, light...), as a data URL. Used with `text`, not `finish`. */
   reference?: string;
+  /**
+   * What kind of change: a new finish or own words (default), "remove" (take the object in the
+   * marked area away and fill in what is behind it) or "add" (put a new object there, from `text`).
+   */
+  action?: EditAction;
   /** Bounding box of the area staff marked on the image, 0–1. */
   area: Box;
 }
+
+export type EditAction = 'change' | 'remove' | 'add';
 
 export interface EditResponse {
   /**
@@ -130,3 +137,56 @@ export interface FinalRequest {
 }
 
 export type FinalResponse = EditResponse;
+
+// ---------------------------------------------------------------- Generate: empty room → designed concepts
+
+/** One concept to generate: a style's colour combination, with any parts staff customised. */
+export interface ConceptSpec {
+  /** "Concept 1" */
+  name: string;
+  /** Combination id within the style, e.g. "graphite-oak". */
+  palette: string;
+  /** Element id → finish. Parts not listed are left to the style. */
+  elements: Record<string, Selection>;
+}
+
+/**
+ * What the browser sends to POST /api/generate: an empty or unfinished room photo
+ * and 1–4 concepts. Walls, windows, doors, ceiling and camera are always kept.
+ */
+export interface GenerateRequest {
+  image: string;
+  width: number;
+  height: number;
+  roomType: RoomTypeId;
+  /** Style id from shared/styles.ts. */
+  style: string;
+  concepts: ConceptSpec[];
+  /** Furniture to add, by name (from the recommendations, or typed). */
+  furniture: string[];
+  /** Staff's brief in their own words (any language; AI help turns it into English first). */
+  brief: string;
+  /** Lighting mood id; "" = as in the photo. */
+  mood: string;
+}
+
+export interface GenerateResponse {
+  provider: string;
+  /** One per concept, in order. A failed one has `error` instead of `image`. */
+  concepts: Variation[];
+}
+
+// ---------------------------------------------------------------- furniture recommendations
+
+export interface RecommendRequest {
+  roomType: RoomTypeId;
+  style: string;
+  palette?: string;
+  /** Staff's brief, if any (any language). */
+  brief?: string;
+}
+
+export interface RecommendResponse {
+  items: { name: string; note: string }[];
+  provider: string;
+}

@@ -1,0 +1,173 @@
+/* ---- Changes made + actions ---- */
+.stage-foot {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 16px;
+  min-height: 40px;
+}
+
+.changes {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  margin: 0 auto 0 0;
+  padding: 2px 0;
+  overflow-x: auto;
+  list-style: none;
+}
+
+.changes li {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  max-width: 320px;
+  height: 28px;
+  padding: 0 9px 0 4px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.changes li:last-child {
+  border-color: var(--accent-line);
+}
+
+.change-num {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: var(--surface-3);
+  color: var(--text);
+  font: 600 10px/1 var(--mono);
+}
+
+.changes li:last-child .change-num {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.change-label {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* Standard: switch between options A–D of the last design */
+.choose {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 38px;
+  padding: 0 4px 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.choose .field-label {
+  margin-right: 6px;
+}
+
+.choose-opt {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: var(--surface-3);
+  color: var(--text-2);
+  font: 600 12px/1 var(--mono);
+  cursor: pointer;
+}
+
+.choose-opt:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.choose-opt[aria-checked='true'] {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.choose-opt.failed {
+  background: var(--danger-soft);
+  color: var(--danger);
+  cursor: not-allowed;
+}
+
+.spec-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border: 1px solid rgb(0 0 0 / 12%);
+  border-radius: 50%;
+}
+
+.stage-hint {
+  margin-right: auto;
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.stage-hint b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.stage-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+
+.save-note {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  margin-top: -4px;
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.save-note .dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warn);
+}
+
+.debug {
+  flex: none;
+  max-height: 160px;
+  overflow: auto;
+  padding: 8px 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.debug summary {
+  cursor: pointer;
+}
+
+.debug pre {
+  margin: 8px 0 0;
+  font: 11px/1.5 var(--mono);
+  white-space: pre-wrap;
+}
+

@@ -1,0 +1,434 @@
+/* ---- Change panel ---- */
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  /* clip, not hidden: a hidden-overflow box can still be scrolled by focus. */
+  overflow: clip;
+  border-right: 1px solid var(--line);
+  background: var(--surface);
+}
+
+/* Source: the customer's photo, room type and the way of working */
+.source-card {
+  flex: none;
+  border-bottom: 1px solid var(--line);
+}
+
+.source {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+}
+
+.source-fields {
+  display: grid;
+  flex: 1;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mode-switch {
+  margin: 0 16px 12px;
+}
+
+.source-thumb {
+  position: relative;
+  flex: none;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.source-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.source-thumb span {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 14px 0 4px;
+  background: linear-gradient(transparent, rgb(28 25 22 / 78%));
+  color: #fff;
+  font: 500 10px/1 var(--mono);
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.source-thumb:hover,
+.source-thumb.over {
+  border-color: var(--accent);
+}
+
+.source-thumb:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.source-thumb.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.source-room {
+  display: grid;
+  flex: 1;
+  gap: 6px;
+  min-width: 0;
+}
+
+.source-fields .source-room {
+  flex: none;
+}
+
+.panel-body {
+  flex: 1;
+  min-height: 0;
+  /* Only scrolls on short screens; normal laptop screens fit without it. */
+  overflow-y: auto;
+}
+
+/* The three steps of a change */
+.steps {
+  display: grid;
+}
+
+.step {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.step:last-child {
+  border-bottom: 0;
+}
+
+.step-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.step-num {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 600 11px/1 var(--mono);
+}
+
+.step-off .step-num {
+  background: var(--surface-3);
+  color: var(--text-3);
+}
+
+.step-value {
+  margin-left: auto;
+  overflow: hidden;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.step-hint {
+  color: var(--text-3);
+  font-size: 12.5px;
+}
+
+.step-hint b {
+  color: var(--text-2);
+  font-weight: 600;
+}
+
+.step-done {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.step-done .link {
+  margin-left: auto;
+}
+
+.step-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+/* Part list: one tap picks the part */
+.parts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.part {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.part span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.part svg {
+  flex: none;
+  color: var(--ok);
+}
+
+.part:hover {
+  border-color: var(--line-hover);
+  color: var(--text);
+}
+
+.part[aria-checked='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* Suggested changes: one click makes the change on the marked area */
+.prompts {
+  display: grid;
+  gap: 5px;
+}
+
+.prompt {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) 14px;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.prompt > svg {
+  color: var(--text-3);
+  transition: transform 0.15s, color 0.15s;
+}
+
+.prompt:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.prompt:hover:not(:disabled) > svg {
+  color: var(--accent);
+  transform: translateX(2px);
+}
+
+.prompt:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.prompt-dot {
+  width: 14px;
+  height: 14px;
+  border: 1px solid rgb(0 0 0 / 12%);
+  border-radius: 50%;
+  background: var(--surface-3);
+}
+
+.prompt-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Custom finish: the full picker, folded away */
+.custom {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.custom.open {
+  background: var(--surface-2);
+}
+
+.custom-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  background: none;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.custom-head:hover {
+  color: var(--text);
+}
+
+.custom-head > svg:last-child {
+  flex: none;
+  margin-left: auto;
+  color: var(--text-3);
+  transition: transform 0.15s;
+}
+
+.custom-head .step-value + svg {
+  margin-left: 6px;
+}
+
+.custom.open .custom-head > svg:last-child {
+  transform: rotate(180deg);
+}
+
+.custom-body {
+  display: grid;
+  gap: 12px;
+  padding: 2px 10px 12px;
+}
+
+/* Each suggestion: apply it, or open it in Custom finish to adjust and add details */
+.prompt-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  gap: 5px;
+}
+
+.prompt-adjust {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-3);
+  cursor: pointer;
+}
+
+.prompt-adjust:hover:not(:disabled) {
+  border-color: var(--accent-line);
+  color: var(--accent);
+}
+
+.prompt-adjust:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Own words: label + "Item photo" button, and the attached item */
+.own-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.attach {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 9px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 6px;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.attach:hover,
+.attach.over {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.attach:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.attached {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 10px;
+  padding: 8px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+}
+
+.attached img {
+  grid-row: span 2;
+  width: 52px;
+  height: 52px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #fff;
+}
+
+.attached span {
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.attached b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.attached .link {
+  justify-self: start;
+}
+

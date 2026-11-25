@@ -1,4 +1,4 @@
-# Render Blueprint: the Room Studio API (Express) only.
+# Render Blueprint: the Dream Studios API (Express) only.
 # The frontend is hosted separately (Vercel), so client/dist is never built here
 # and the server only answers /api/*.
 projects:

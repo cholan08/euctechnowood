@@ -1,4 +1,4 @@
-// Checks the paste-back (client/src/lib/composite.ts) with a synthetic "AI" image that is
+// Checks the paste-back (client/src/features/studio/lib/composite.ts) with a synthetic "AI" image that is
 // zoomed, shifted, brighter and smaller than the photo, with the marked part recoloured.
 // Needs the Vite dev server, which serves the TypeScript module: npm run dev:web
 // Usage: node tests/ui/paste-back.check.mjs http://localhost:5173 /tmp/paste-back.jpg
@@ -10,7 +10,7 @@ await c.send('Page.enable');
 await c.send('Page.navigate', { url: base });
 await sleep(1500);
 const r = await c.evaluate(`(async () => {
-  const { pasteBack } = await import('/src/lib/composite.ts');
+  const { pasteBack } = await import('/src/features/studio/lib/composite.ts');
   const load = async (u) => createImageBitmap(await (await fetch(u)).blob());
   const cv = (w, h) => { const x = document.createElement('canvas'); x.width = w; x.height = h; return x; };
   const src = await load('/brand/manufactured.jpg');
