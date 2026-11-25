@@ -1,6 +1,6 @@
-# Render Blueprint: the Dream Studios API (Express) only.
-# The frontend is hosted separately (Vercel), so client/dist is never built here
-# and the server only answers /api/*.
+# Render Blueprint: one web service that runs the Express API and also serves the
+# built frontend (client/dist). Accounts, clients, projects and images live on a
+# persistent disk, so a paid plan is required.
 projects:
   - name: euc-room-studio
     environments:
@@ -9,20 +9,25 @@ projects:
           - type: web
             name: euc-room-studio-api
             runtime: node
-            plan: free
+            plan: starter # persistent disks are not available on the free plan
             region: singapore
-            branch: phase-1-trim
+            branch: phase-1-trim # switch to main once phase-1-trim is merged
             # tsx (used by `npm start`) is a devDependency, and NODE_ENV=production
-            # would otherwise make npm skip devDependencies.
-            buildCommand: npm ci --include=dev
+            # would otherwise make npm skip devDependencies. `npm run build` makes client/dist.
+            buildCommand: npm ci --include=dev && npm run build
             startCommand: npm start
             healthCheckPath: /api/health
             autoDeployTrigger: commit
-            # Frontend-only changes don't redeploy the API.
+            # studio.db and stored images live here.
+            disk:
+              name: studio-data
+              mountPath: /var/data
+              sizeGB: 5
             buildFilter:
               paths:
                 - server/**
                 - shared/**
+                - client/**
                 - package.json
                 - package-lock.json
             envVars:
@@ -32,7 +37,16 @@ projects:
                 value: production
               - key: TRUST_PROXY
                 value: "1"
+              - key: DATA_DIR
+                value: /var/data
               - key: IMAGE_PROVIDER
                 value: xai
               - key: XAI_API_KEY
                 sync: false # pasted into the Render dashboard, never committed
+              # First admin, created only while the studio has no accounts.
+              - key: ADMIN_EMAIL
+                sync: false
+              - key: ADMIN_PASSWORD
+                sync: false
+              - key: ADMIN_NAME
+                value: Studio admin
