@@ -16,7 +16,8 @@ export async function connect(port = 9333) {
       msg.error ? reject(new Error(msg.error.message)) : resolve(msg.result);
     } else {
       // Accept "Leave page?" and other dialogs, so a page with undownloaded results can't block navigation.
-      if (msg.method === 'Page.javascriptDialogOpening') send('Page.handleJavaScriptDialog', { accept: true }).catch(() => {});
+      // Prompts (e.g. a design's name) are left to the check, which answers them with text.
+      if (msg.method === 'Page.javascriptDialogOpening' && msg.params.type !== 'prompt') send('Page.handleJavaScriptDialog', { accept: true }).catch(() => {});
       listeners.forEach((l) => l(msg));
     }
   };

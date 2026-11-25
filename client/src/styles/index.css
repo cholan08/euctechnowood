@@ -1,0 +1,22 @@
+/* All styles, in cascade order: later files may override earlier ones, so keep
+   this order. Colours, fonts and radii live only in tokens.css. */
+@import './tokens.css';
+@import './base.css';
+@import './shell.css';
+@import './start.css';
+
+/* The studio: panel | stage, then each area, then the responsive overrides last. */
+@import './studio/layout.css';
+@import './studio/change-panel.css';
+@import './studio/prompt-bar.css';
+@import './studio/fields.css';
+@import './studio/standard.css';
+@import './studio/stage.css';
+@import './studio/marking.css';
+@import './studio/busy.css';
+@import './studio/changes.css';
+@import './studio/picking.css';
+@import './studio/compare.css';
+@import './studio/generate.css';
+@import './pages.css';
+@import './studio/responsive.css';

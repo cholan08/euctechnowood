@@ -1,0 +1,475 @@
+/* ---- Standard mode: options A–D, tabs, part editors ---- */
+/* Tabs */
+.tabs {
+  display: flex;
+  flex: none;
+  gap: 20px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-2);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab[aria-selected='true'] {
+  color: var(--text);
+  box-shadow: inset 0 -2px var(--accent);
+}
+
+.tab-count {
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 600 10px/1 var(--mono);
+}
+
+.tab-panel {
+  /* Containing block for the hidden inputs inside chips, so they stay inside this box. */
+  position: relative;
+  display: grid;
+  flex: 1;
+  align-content: start;
+  gap: 12px;
+  min-height: 0;
+  padding: 14px 16px;
+  /* Only scrolls on very short screens; normal laptop screens fit without it. */
+  overflow-y: auto;
+}
+
+.tab-hint {
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.tab-hint b {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Options A–D: alternative specs of the same room */
+.variants {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.variant {
+  position: relative;
+}
+
+.variant-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px 0 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.variant-pick:hover {
+  color: var(--text);
+}
+
+.variant.on .variant-pick {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.variant-letter {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: var(--surface-3);
+  font: 600 11px/1 var(--mono);
+}
+
+.variant.on .variant-letter {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.variant-count {
+  font: 500 11px/1 var(--mono);
+}
+
+.variant-x {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: none;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--surface-3);
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.variant:hover .variant-x,
+.variant-x:focus-visible {
+  display: grid;
+}
+
+.variant-x:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.variant-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-2);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.variant-add:hover {
+  border-color: var(--accent-line);
+  color: var(--text);
+}
+
+.variant-max {
+  color: var(--text-3);
+  font: 500 11px var(--mono);
+}
+
+.variant-reset {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-3);
+  cursor: pointer;
+}
+
+.variant-reset:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.variant-reset:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.tab-hint svg {
+  vertical-align: -1px;
+  margin-right: 2px;
+}
+
+/* Room parts: a collapsed row per part, opening into a spec editor */
+.el-list {
+  display: grid;
+  margin: 0 -16px;
+  border-top: 1px solid var(--line);
+}
+
+.el {
+  border-bottom: 1px solid var(--line);
+}
+
+.el.open {
+  background: var(--surface-2);
+}
+
+.el-head {
+  display: grid;
+  grid-template-columns: 20px auto minmax(0, 1fr) 14px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 44px;
+  padding: 0 16px;
+  border: 0;
+  background: none;
+  color: var(--text-2);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.el-head:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.el-head > svg:last-child {
+  color: var(--text-3);
+  transition: transform 0.15s;
+}
+
+.el.open .el-head > svg:last-child {
+  transform: rotate(180deg);
+}
+
+.el-dot {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgb(0 0 0 / 12%);
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.el-dot.locked {
+  border-color: var(--line-strong);
+  background: none;
+  color: var(--text-3);
+}
+
+.el-name {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.el.changed .el-name {
+  color: var(--text);
+}
+
+.el-value {
+  overflow: hidden;
+  color: var(--text-3);
+  font-size: 12px;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.el.changed .el-value {
+  color: var(--accent);
+}
+
+.el-body {
+  display: grid;
+  gap: 14px;
+  padding: 4px 16px 16px 46px;
+}
+
+.el-hint {
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.el-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.hex-input {
+  width: 170px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: 12px var(--mono);
+}
+
+.hex-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.field-label i {
+  margin-left: 4px;
+  color: var(--text-3);
+  font: 400 11px var(--font);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.el-error {
+  color: var(--danger);
+}
+
+/* Material sample photo */
+.sample-drop {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 6px;
+  color: var(--text-2);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.sample-drop:hover,
+.sample-drop.over {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.sample-drop:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.sample {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 3px 10px;
+}
+
+.sample img {
+  grid-row: span 2;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.sample > span {
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.sample .link {
+  justify-self: start;
+}
+
+.spec-label {
+  color: var(--text-3);
+}
+
+.summary b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.summary-locked svg {
+  vertical-align: -1px;
+}
+
+/* Extras */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--text-2);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.chip:hover {
+  border-color: var(--line-hover);
+  color: var(--text);
+}
+
+.chip:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 500;
+}
+
+.chip:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.notes {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.notes .field-label {
+  display: flex;
+  align-items: baseline;
+}
+
+.notes-count {
+  margin-left: auto;
+  color: var(--text-3);
+  font: 500 10px/1 var(--mono);
+}
+
+/* Apply / Generate */
+.panel-foot {
+  display: grid;
+  flex: none;
+  gap: 10px;
+  padding: 14px 16px 16px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.foot-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-3);
+  font-size: 12px;
+  text-align: center;
+}
+
+.foot-hint .spinner {
+  width: 13px;
+  height: 13px;
+  color: var(--accent);
+}
+

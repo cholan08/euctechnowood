@@ -1,14 +1,27 @@
-# EUC Room Studio
+# EUC Dream Studios
 
-An internal design tool for EUC Technowood's staff. Upload a customer's room photo (or a Cabinet Vision image) and
-change it in one of two ways (switch at the top of the panel; both add to the same list of changes):
+An internal AI interior design studio for EUC Technowood's staff, behind a sign-in.
 
-- **Mark & edit**: pick the part (base cabinets, countertop, wall paint...), mark it on the photo, then **click one of
+**Studio management.** Clients → projects → rooms. Each room keeps its full **image history** (the photo, every
+change, every option and concept, final images and boards) and its **saved designs** for the client. **Team access**:
+admins add staff as *admin*, *designer* or *viewer*, set daily image limits and see usage; a project's owner chooses
+who else may edit it (everyone may view). The **Quick studio** (`/studio`) works without a project and stores nothing.
+
+**Three ways of working** in the studio (switch at the top of the panel; all add to the same list of changes):
+
+- **Generate** (empty or unfinished room): pick a **style** (Modern, Luxury, Minimalist, Industrial, Scandinavian,
+  Contemporary Indian, Classic) and its **colour combinations**: one **concept** each, up to four. Every part of each
+  concept can be customised, **furniture recommendations** can be ticked (or asked of the AI for the brief, in any
+  language), plus a brief and lighting. Walls, windows, doors, ceiling and camera always stay.
+
+- **Mark & edit** (**Change · Add · Remove**): pick the part (base cabinets, countertop, wall paint...), mark it on the photo, then **click one of
   the suggested changes** that appear ("Sage green laminate, super-matte"). A custom finish (material, shade, sheen)
   or your own words ("light grey with fluted grooves") work too. **Item photo**: to put a sofa, chair or light from
   another photo into the room, mark where it goes and attach (or paste) its photo; both photos go to the AI.
-  Only the marked area changes.
-- **Standard**: the full spec editor. Set a new finish for any part of the room, up to four options (A–D), plus
+  **Add** puts a new object (in words, or from a photo) in the marked area; **Remove** takes the marked object away and
+  fills in what was behind it. Only the marked area changes.
+- **Standard**: the full spec editor. **Start from a style** fills only the parts the customer wants changed with a
+  style's combination (or makes options A–D from its combinations); every other part stays locked to the photo. Set a new finish for any part of the room, up to four options (A–D), plus
   lighting mood, add-ons, sample photos and a designer's note; the AI redraws the whole image. A Cabinet Vision render
   with no changes becomes photoreal.
 
@@ -25,14 +38,19 @@ download.
 
 **Mark & edit only changes the marked area.** The AI image model redraws the whole photo on every edit, so its output drifts from
 the real room (textures, objects, framing). The browser therefore keeps only the area staff marked
-(`client/src/lib/composite.ts`): it lines the AI image up with the photo (zoom and shift found on the unmarked
+(`client/src/features/studio/lib/composite.ts`): it lines the AI image up with the photo (zoom and shift found on the unmarked
 areas), matches its exposure, and pastes the marked area back with a soft edge. Every other pixel is the original
 photo. Marking tools: **Brush**, **Corners** (click the corners of straight-edged parts such as cabinet fronts) and
 **Eraser**.
 
-**Images are never stored.** Each design goes from the AI straight to the browser and
-exists only in that tab until it is downloaded. The studio warns before anything
-undownloaded would be lost.
+**Where images live.** In a project room every result is saved to the room's history on the server as it is made
+(database `DATA_DIR/studio.db`, files `DATA_DIR/images`), so nothing is lost on refresh and the team can open it. The
+Quick studio keeps results only in the tab and warns before they would be lost. Photos are sent to the AI service to
+be processed. See [docs/DECISIONS.md](docs/DECISIONS.md).
+
+**Presentation board.** On a room page, pick up to three saved designs: the browser draws a branded 2400×1500 board
+(EUC logo, client, project, the design large, the original, alternatives, what changes with swatches, palette, notes),
+to download or keep in the room.
 
 The build plan and current phase are in [docs/PLAN.md](docs/PLAN.md).
 
@@ -41,8 +59,11 @@ The build plan and current phase are in [docs/PLAN.md](docs/PLAN.md).
 ```bash
 npm install
 cp .env.example .env     # add XAI_API_KEY (or GEMINI_API_KEY); empty = mock mode
+                         # set ADMIN_EMAIL + ADMIN_PASSWORD for the first admin (or run `npm run create-admin`)
 npm run dev              # UI http://localhost:5173 · API http://localhost:8787
 ```
+
+Sign in with the admin account, then add staff on **Team**. There is no public sign-up.
 
 Production-style: `npm run build && npm start` (one server on port 8787 serves the built UI from `client/dist` and the API).
 
@@ -55,39 +76,51 @@ Shortcuts: <kbd>Ctrl</kbd>+<kbd>V</kbd> pastes an image, <kbd>Ctrl</kbd>+<kbd>En
 
 ## Look and feel
 
-Room Studio has its own dark "studio" design: a graphite workspace so the room images stand out, one electric-lime
-accent for actions and selection, and the Geist / Geist Mono fonts. EUC appears as the client ("for EUC Technowood"
-in the top bar). All colours live in `client/src/styles/tokens.css`.
+A light, warm "interior magazine" look: warm-white paper background, white cards with soft shadows, charcoal text,
+the Fraunces serif for page titles with Geist for everything else, and EUC's burnt orange (`#A94F18`, AA contrast
+with white text) as the one accent for actions and selection. Room photos sit on a slightly darker warm canvas so they
+stand out. The mark painted on photos is a vivid blue, so it shows on wood, stone and white walls. All colours, fonts,
+radii and shadows live in `client/src/styles/tokens.css`.
 
 ## Folder structure
+
+The layers, their rules and how to add a module or an AI service are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ```
 project/
 ├── client/                 React + Vite frontend
 │   ├── index.html
-│   ├── vite.config.ts        Dev proxy /api -> :8787 · builds to client/dist
-│   ├── tsconfig.json
-│   ├── public/               favicon.svg (Room Studio mark) · brand/ (EUC logo, sample kitchen images used by the checks)
+│   ├── vite.config.ts        Dev proxy /api -> :8787 · @shared alias · builds to client/dist
+│   ├── public/               favicon.svg (Dream Studios mark) · brand/ (EUC logo, sample kitchen images used by the checks)
 │   └── src/
-│       ├── main.tsx · App.tsx  Entry and routes
-│       ├── pages/              StudioPage.tsx (start screen + one-screen studio: both modes, changes, undo, try again, final 2K, downloads)
-│       ├── components/         layout/AppBar · studio/ (StartScreen, SourceCard + mode switch, ChangePanel (Mark & edit), DesignPanel + ElementEditor (Standard), PromptBar (AI help), Viewer, MaskEditor, CompareSlider) · ui/ (FileDrop, Icon)
-│       ├── api/                fetch wrappers for the server
-│       ├── lib/                mask.ts (the mark) · composite.ts (align + paste back, fit the final image) · change.ts / design.ts (session state) · image resizing, downloads, fit-to-screen sizing
-│       └── styles/             tokens.css (all colours, fonts, radii) · base · shell · start · studio
+│       ├── main.tsx · app/     Entry and routes
+│       ├── features/studio/    The studio
+│       │   ├── StudioPage.tsx    Layout only (start screen + one-screen studio)
+│       │   ├── hooks/            useStudio (composes the rest) · useSession (photo, changes, final, downloads) · useMarkEdit · useStandardDesign · useShortcuts
+│       │   ├── model/            steps.ts / design.ts: session types and pure helpers
+│       │   ├── components/       StartScreen, SourceCard + mode switch, ChangePanel (Mark & edit), DesignPanel + ElementEditor (Standard), PromptBar (AI help), Viewer, MaskEditor, CompareSlider
+│       │   └── lib/              mask.ts (the mark) · composite.ts (align + paste back, fit the final image)
+│       ├── api/                Typed fetch wrappers for the server
+│       ├── components/         Shared UI: layout/AppBar · ui/ (FileDrop, Icon)
+│       ├── lib/                Image resizing, downloads, fit-to-screen sizing
+│       └── styles/             index.css (cascade order) · tokens.css (all colours, fonts, radii) · base · shell · start · studio/ (one file per area)
 ├── server/                 Express API
-│   ├── index.ts              Starts the server
-│   ├── app.ts                Builds the Express app (serves client/dist in production)
-│   ├── config.ts             Reads .env once
-│   ├── tsconfig.json
-│   ├── routes/               studio.ts: POST /api/edit (one marked change) · /api/redesign (Standard, options A–D) · /api/final (2K pass) · /api/assist (AI help) · GET /api/health
-│   ├── services/             prompt.ts (the image prompts) · assist.ts (AI help prompt + parsing) · validate.ts (zod) · rateLimiter.ts
-│   └── providers/            One adapter per AI service: xai.ts · gemini.ts · mock (index.ts) · text.ts (text models for AI help)
-├── shared/                 Code used by both sides
+│   ├── index.ts              Starts the server (reads .env, checks config, builds providers)
+│   ├── app.ts                createApp({ config, providers }): middleware, modules, error handler, client/dist
+│   ├── config.ts             The only reader of process.env, checked with zod
+│   ├── http/                 Security headers, quotas, error responses, static files
+│   ├── modules/              One folder per feature: routes → service → prompts / schema
+│   │   ├── studio/             POST /api/edit (one marked change) · /api/redesign (Standard, options A–D) · /api/final (2K pass)
+│   │   ├── assist/             POST /api/assist (AI help)
+│   │   └── health/             GET /api/health
+│   ├── providers/            One adapter per AI service: xai/ · gemini/ (image.ts, text.ts) · mock.ts · index.ts (picks from config)
+│   └── lib/                  Error types, image data URLs, zod building blocks, rate limiter
+├── shared/                 Code used by both sides (imported as @shared/...)
 │   ├── catalog.ts            Room parts, materials, shades, finishes, suggested changes, moods, add-ons and their prompt text
 │   └── types.ts              Request / response types
 ├── tests/ui/               Browser checks over the Chrome DevTools Protocol (see UI check)
-├── docs/PLAN.md
+├── docs/                   ARCHITECTURE.md · PLAN.md
+├── vitest.config.ts        Unit tests (*.test.ts next to the code)
 ├── package.json            Scripts and dependencies for both sides
 ├── README.md
 └── .env.example
@@ -97,18 +130,33 @@ project/
 
 `IMAGE_PROVIDER` = `xai`, `gemini` or `mock` (auto-picked from whichever key is set).
 **xAI**: model `grok-imagine-image-2.0`. The `grok-4.x` models are chat models and cannot make images.
-To add another service, create `server/providers/<name>.ts` implementing `ImageEditProvider` and register it in `providers/index.ts`.
+To add another service, create `server/providers/<name>/image.ts` implementing `ImageEditProvider`, add its settings to
+`server/config.ts` and a case in `providers/index.ts` (details in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)).
+
+## Tests
+
+```bash
+npm test          # unit tests (Vitest, mock provider, no API key needed)
+npm run check     # typecheck both sides + unit tests
+```
 
 ## UI check
 
 ```bash
 npm run build
-IMAGE_PROVIDER=mock PORT=8798 npm start &
+IMAGE_PROVIDER=mock PORT=8798 DATA_DIR=/tmp/rs-check IMAGES_PER_HOUR=1000 \
+  ADMIN_EMAIL=admin@studio.test ADMIN_PASSWORD=admin-password-123 npm start &
 brave --headless=new --remote-debugging-port=9333 about:blank &     # or chromium / google-chrome
-node tests/ui/studio.check.mjs http://localhost:8798 client/public/brand/manufactured.jpg /tmp/ui-shots /tmp/ui-downloads
+# Studio management: sign-in, project, room upload, Generate, Remove, saved design, history, board, usage
+node tests/ui/workspace.check.mjs http://localhost:8798 client/public/brand/manufactured.jpg /tmp/ui-shots admin@studio.test admin-password-123
+# The studio itself (quick studio)
+STUDIO_EMAIL=admin@studio.test STUDIO_PASSWORD=admin-password-123 \
+  node tests/ui/studio.check.mjs http://localhost:8798 client/public/brand/manufactured.jpg /tmp/ui-shots ~/ui-downloads
 ```
 
-The paste-back check imports `composite.ts` from the Vite dev server (`npm run dev:web`), feeds it a synthetic AI
+A snap-packaged browser cannot write to `/tmp`, so give it a download folder in your home directory.
+
+The paste-back check imports `client/src/features/studio/lib/composite.ts` from the Vite dev server (`npm run dev:web`), feeds it a synthetic AI
 image that is zoomed, shifted and brighter, and measures that the result keeps the photo outside the mark and lines
 up inside it:
 

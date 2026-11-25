@@ -1,47 +1,60 @@
 /*
- * Room Studio design tokens. A dark "studio" workspace, so room images are the
- * brightest thing on screen, with one signature accent used only for actions
- * and selection. Change colours here only.
+ * Room Studio design tokens: a light, warm "interior magazine" look. Warm white
+ * paper, charcoal ink, soft shadows, an elegant serif for headings and EUC's
+ * burnt-orange as the one accent for actions and selection. Change colours here
+ * only; every other file reads these.
  */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  /* Surfaces, darkest to lightest */
-  --bg: #0b0c0e;
-  --canvas: #08090a;
-  --surface: #131518;
-  --surface-2: #1a1d21;
-  --surface-3: #23272c;
-  --line: #262a30;
-  --line-strong: #343a42;
+  /* Surfaces, page to raised */
+  --bg: #f6f0e7; /* warm paper */
+  --canvas: #eae1d4; /* behind room photos, so they stand out */
+  --surface: #fffcf8; /* cards, panels: a touch of cream */
+  --surface-2: #f3ebdf; /* inputs, tracks, hovers */
+  --surface-3: #e8dece; /* pressed, chips */
+  --line: #e7ddcf;
+  --line-strong: #d7cab8;
+  --line-hover: #c0b09a;
 
-  /* Text */
-  --text: #eceef1;
-  --text-2: #a4abb5;
-  --text-3: #6d7581;
+  /* Ink */
+  --text: #231f1c;
+  --text-2: #5a544e;
+  --text-3: #6b645c;
 
-  /* Signature accent: electric lime. Text on it is always --on-accent. */
-  --accent: #d4ff3a;
-  --accent-hover: #e2ff74;
-  --accent-soft: rgb(212 255 58 / 12%);
-  --accent-line: rgb(212 255 58 / 45%);
-  --on-accent: #0b0c0e;
+  /* Signature accent: EUC burnt orange (white text on it passes WCAG AA). */
+  --accent: #a94f18;
+  --accent-hover: #924312;
+  --accent-soft: rgb(169 79 24 / 10%);
+  --accent-line: rgb(169 79 24 / 40%);
+  --on-accent: #ffffff;
+
+  /* The mark painted on photos: a vivid blue that stands out on wood, stone and white walls. */
+  --mark: #2f6bff;
+  --mark-soft: rgb(47 107 255 / 22%);
+
+  /* Labels laid over photos */
+  --overlay: rgb(28 25 22 / 72%);
+  --on-overlay: #ffffff;
 
   /* Status */
-  --ok: #4ade80;
-  --warn: #fbbf24;
-  --warn-soft: rgb(251 191 36 / 12%);
-  --danger: #f87171;
-  --danger-soft: rgb(248 113 113 / 12%);
+  --ok: #2f7d4f;
+  --ok-soft: rgb(47 125 79 / 10%);
+  --warn: #9a6512;
+  --warn-soft: rgb(196 134 30 / 12%);
+  --danger: #b3261e;
+  --danger-soft: rgb(179 38 30 / 8%);
 
-  --radius-lg: 16px;
-  --radius: 12px;
-  --radius-sm: 8px;
-  --shadow: 0 12px 32px rgb(0 0 0 / 45%);
-  --shadow-lg: 0 30px 80px rgb(0 0 0 / 60%);
+  --radius-lg: 18px;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow-sm: 0 1px 2px rgb(60 45 30 / 6%), 0 1px 1px rgb(60 45 30 / 4%);
+  --shadow: 0 8px 24px rgb(60 45 30 / 10%), 0 2px 6px rgb(60 45 30 / 5%);
+  --shadow-lg: 0 30px 70px rgb(40 30 20 / 22%);
 
   --font: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
   --mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
-  --bar-h: 56px;
+  --bar-h: 60px;
 }

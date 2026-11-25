@@ -1,11 +1,10 @@
-// Every AI image service is wrapped behind this one interface, so we can swap
-// or A/B-test models (Gemini, OpenAI, FLUX, a self-hosted model...) without
-// touching the rest of the app.
+import type { ImageData } from '../lib/image';
 
-export interface ImageData {
-  mimeType: string;
-  base64: string;
-}
+// Every AI service is wrapped behind these interfaces, so we can swap or A/B-test
+// models (Gemini, OpenAI, FLUX, a self-hosted model...) without touching the rest
+// of the app. Adapters throw ProviderError (lib/errors) when a call fails.
+
+export type { ImageData };
 
 export interface EditInput {
   prompt: string;
@@ -19,31 +18,32 @@ export interface EditInput {
   resolution?: '2k';
 }
 
-export interface EditOutput {
-  mimeType: string;
-  base64: string;
-}
+export type EditOutput = ImageData;
+
+/** How a prompt names input image n: 0 is the room photo, 1+ the references in order. */
+export type ImageRef = (index: number) => string;
 
 export interface ImageEditProvider {
   /** Shown in logs and the UI, e.g. "gemini:gemini-3.1-flash-image". */
-  name: string;
-  /**
-   * How a prompt names an input image: 0 is the room photo, 1+ the references in order.
-   * Each service has its own convention (xAI: "<IMAGE_1>").
-   */
-  imageRef(index: number): string;
+  readonly name: string;
+  /** Each service has its own convention for naming images in a prompt (xAI: "<IMAGE_1>"). */
+  imageRef: ImageRef;
   edit(input: EditInput, signal?: AbortSignal): Promise<EditOutput>;
 }
 
-export class ProviderError extends Error {
-  readonly status: number | undefined;
-  /** The service refused the request on safety or policy grounds. */
-  readonly blocked: boolean;
+/**
+ * A text model for "AI help" in the prompt bars: it turns a few rough words (any
+ * language) into short, clear English instructions. Kept apart from the image
+ * providers: it is a different endpoint, model and price.
+ */
+export interface TextProvider {
+  /** Shown in the API response, e.g. "xai:grok-4.20-0309-non-reasoning". */
+  readonly name: string;
+  complete(system: string, user: string, signal?: AbortSignal): Promise<string>;
+}
 
-  constructor(message: string, status?: number, blocked = false) {
-    super(message);
-    this.name = 'ProviderError';
-    this.status = status;
-    this.blocked = blocked;
-  }
+/** The AI services the app runs with. `text` is null in mock mode. */
+export interface Providers {
+  image: ImageEditProvider;
+  text: TextProvider | null;
 }

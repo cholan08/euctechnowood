@@ -1,0 +1,63 @@
+/* ---- Waiting for the AI ---- */
+.canvas-loading img {
+  filter: blur(8px) saturate(0.4) brightness(0.55);
+  transform: scale(1.06);
+}
+
+/* A lime scan line sweeping the image while the AI works. */
+.scan {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 24px 6px rgb(169 79 24 / 35%);
+  animation: scan 2.6s ease-in-out infinite alternate;
+}
+
+@keyframes scan {
+  to {
+    top: calc(100% - 2px);
+  }
+}
+
+.loading-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(440px, 88%);
+  padding: 16px 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: rgb(255 255 255 / 92%);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+  transform: translate(-50%, -50%);
+}
+
+.loading-card .spinner {
+  width: 22px;
+  height: 22px;
+  color: var(--accent);
+}
+
+.loading-card strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.loading-card span {
+  color: var(--text-2);
+  font-size: 12.5px;
+}
+
+.loading-card b {
+  color: var(--accent);
+  font: 500 12px var(--mono);
+}
+

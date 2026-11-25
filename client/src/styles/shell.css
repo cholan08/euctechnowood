@@ -26,7 +26,8 @@
   height: var(--bar-h);
   padding: 0 16px;
   border-bottom: 1px solid var(--line);
-  background: rgb(11 12 14 / 88%);
+  background: rgb(255 255 255 / 86%);
+  box-shadow: var(--shadow-sm);
   backdrop-filter: blur(12px);
 }
 
@@ -72,6 +73,7 @@
   padding: 3px 7px;
   border-radius: 6px;
   background: #fff;
+  box-shadow: inset 0 0 0 1px var(--line);
 }
 
 .appbar-actions {
@@ -90,8 +92,8 @@
   border: 1px solid var(--line-strong);
   border-radius: 999px;
   color: var(--text-2);
-  font: 500 11px/1 var(--mono);
-  letter-spacing: 0.04em;
+  font: 600 11px/1 var(--font);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -106,11 +108,12 @@
 
 .status-ok::before {
   background: var(--ok);
-  box-shadow: 0 0 0 3px rgb(74 222 128 / 18%);
+  box-shadow: 0 0 0 3px var(--ok-soft);
 }
 
 .status-warn {
-  border-color: rgb(251 191 36 / 35%);
+  border-color: rgb(154 101 18 / 30%);
+  background: var(--warn-soft);
   color: var(--warn);
 }
 
@@ -119,7 +122,8 @@
 }
 
 .status-bad {
-  border-color: rgb(248 113 113 / 35%);
+  border-color: rgb(179 38 30 / 30%);
+  background: var(--danger-soft);
   color: var(--danger);
 }
 

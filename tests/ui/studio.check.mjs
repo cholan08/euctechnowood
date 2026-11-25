@@ -1,6 +1,6 @@
 // End-to-end check of the studio (Mark & edit, Standard, Final 2K), driven over the Chrome DevTools Protocol.
-// Usage (see README): node tests/ui/studio.check.mjs <app url> <photo> <screenshot dir> <browser download dir>
-// Run the app with IMAGE_PROVIDER=mock so no AI images are paid for.
+// Usage (see README): STUDIO_EMAIL=… STUDIO_PASSWORD=… node tests/ui/studio.check.mjs <app url> <photo> <screenshot dir> <browser download dir>
+// Run the app with IMAGE_PROVIDER=mock so no AI images are paid for. It signs in, then uses the quick studio (/studio).
 import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { connect, sleep } from './cdp.mjs';
 import { resolve } from 'node:path';
@@ -31,9 +31,15 @@ const ideas = (scope) => ev(`[...document.querySelectorAll('${scope} .pbar-idea'
 const waitFor = async (js, ms = 10000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await ev(js)) return true; await sleep(100); } return false; };
 
 await size(1280, 720);
+// Sign in first: the studio is for staff only.
+const signIn = new Promise((r) => c.on((m) => m.method === 'Page.loadEventFired' && r()));
+await c.send('Page.navigate', { url: `${base}/login` });
+await signIn;
+const login = await ev(`fetch('/api/auth/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: ${JSON.stringify(process.env.STUDIO_EMAIL ?? '')}, password: ${JSON.stringify(process.env.STUDIO_PASSWORD ?? '')} }) }).then(r => r.status)`);
+if (login !== 200) throw new Error(`Sign-in failed (${login}): set STUDIO_EMAIL and STUDIO_PASSWORD`);
 // Wait for the new page to load: the tab may already show the same start screen.
 const loaded = new Promise((r) => c.on((m) => m.method === 'Page.loadEventFired' && r()));
-await c.send('Page.navigate', { url: base });
+await c.send('Page.navigate', { url: `${base}/studio` });
 await loaded;
 await waitFor(`!!document.querySelector('.drop-tile')`);
 await sleep(400);
@@ -48,7 +54,7 @@ check('studio opens after upload (Mark & edit)', await waitFor(`!!document.query
 await sleep(300);
 check('studio fits 1280x720 without page scroll', await noScroll());
 const modes = await ev(`[...document.querySelectorAll('.mode-switch label')].map(l => l.textContent.trim())`);
-check('mode switch shows both ways of working', modes.join('|') === 'Mark & edit|Standard', modes.join('|'));
+check('mode switch shows the three ways of working', modes.join('|') === 'Mark & edit|Standard|Generate', modes.join('|'));
 const hint = () => ev(`document.querySelector('.foot-hint')?.textContent`);
 check('hint asks for a part', (await hint()) === 'Pick the part to change, then mark it on the photo.', await hint());
 check('no prompts before marking', await ev(`document.querySelectorAll('.prompt').length === 0`));

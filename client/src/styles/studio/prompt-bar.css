@@ -1,0 +1,143 @@
+/* Prompt bar: staff's own words, with AI help */
+.pbar {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pbar-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pbar-row.multi {
+  align-items: flex-end;
+}
+
+.pbar input,
+.pbar textarea {
+  flex: 1;
+  /* A text box has a built-in width; zero lets the row decide, so it never pushes the panel wider. */
+  width: 0;
+  min-width: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.pbar input {
+  height: 34px;
+  padding: 0 10px;
+}
+
+.pbar input::placeholder,
+.pbar textarea::placeholder {
+  color: var(--text-3);
+}
+
+.pbar input:focus,
+.pbar textarea:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.pbar-ai {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.pbar-ai:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.pbar-ai:disabled {
+  cursor: progress;
+}
+
+.pbar-ai .spinner {
+  width: 12px;
+  height: 12px;
+}
+
+.pbar-go {
+  flex: none;
+  width: 34px;
+  min-height: 34px;
+  padding: 0;
+}
+
+.pbar-error {
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.pbar-ideas {
+  display: grid;
+  gap: 5px;
+}
+
+.pbar-idea {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px dashed var(--accent-line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12.5px;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pbar-idea svg {
+  margin-top: 2px;
+  color: var(--accent);
+}
+
+.pbar-idea:hover {
+  border-style: solid;
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.pbar-dismiss {
+  justify-self: end;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-2);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.link:hover {
+  color: var(--accent);
+}
+

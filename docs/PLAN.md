@@ -1,4 +1,4 @@
-# EUC Room Studio: Build and Deployment Plan
+# EUC Dream Studios: Build and Deployment Plan
 
 Updated: 20 Nov 2026. Starting point: the working MVP in this repo (one-screen studio, xAI + Gemini providers, 74 passing UI checks).
 
@@ -15,12 +15,12 @@ An **internal design tool for EUC Technowood's staff**. During EUC's paid design
 | Users | EUC staff only, behind a login. No public access. |
 | Billing | None in the app. EUC charges the design amount in their own process. |
 | Quote form / leads | Removed. Staff already know the customer. |
-| Images | **Not stored.** Image → AI → shown in the browser → downloaded. Nothing saved on the server. |
-| Database | Small: staff logins + a usage log (who made how many designs, when, AI cost). No images. |
+| Images | ~~Not stored.~~ **Stored on the server since 25 Nov 2026** (client's decision, see [DECISIONS.md](DECISIONS.md)): every room photo and result is kept in the room's history so the team can share projects. |
+| Database | Staff, sessions, clients, projects, rooms, image history, saved designs and the usage log (SQLite). Image files in `DATA_DIR/images`. |
 | Clients | One: EUC, on their own domain (for example `studio.<euc-domain>`). |
 | Hosting | One small VPS in India, running the frontend, backend and database together. |
 
-**What "no image storage" means for staff:** designs live only in the open browser tab. Closing or refreshing the page loses anything not downloaded. The studio warns before leaving with undownloaded designs.
+**25 Nov 2026 update:** the client asked for studio management (clients, projects, rooms, image history, saved designs, team access with roles, sign-in), Generate (empty room → concepts in a style), Remove / Add object, style combinations and furniture recommendations, and presentation boards. All are built; see the README and [DECISIONS.md](DECISIONS.md). Phase 2 below is done. The quick studio (`/studio`) still keeps nothing.
 
 ---
 
@@ -115,7 +115,7 @@ Estimates are for **one developer**.
 
 - [ ] **Test set:** 20–30 real EUC photos and Cabinet Vision renders; score structure kept, changes applied and realism
 - [x] **Layout fidelity:** whole-room styles removed (Japandi moved the island and added a window). Replaced by a per-part spec editor: every part not changed is listed in the prompt as "keep exactly"; layout rules forbid moving, adding or removing anything.
-- [x] **One change at a time, manual marking (23 Nov 2026).** EUC's client and manager found the spec editor too advanced, and prompts alone still let the AI drift from the real photo. Now: pick part → pick finish → mark it on the photo (brush / corners / eraser) → apply. The browser pastes back only the marked area of the AI image, lined up and exposure-matched (`client/src/lib/composite.ts`), so everything else stays the original pixels. Changes stack with Undo and Try again. Removed: options A–D, lighting moods, staging add-ons, notes, sample photos, shutter designs and the CV-render mode.
+- [x] **One change at a time, manual marking (23 Nov 2026).** EUC's client and manager found the spec editor too advanced, and prompts alone still let the AI drift from the real photo. Now: pick part → pick finish → mark it on the photo (brush / corners / eraser) → apply. The browser pastes back only the marked area of the AI image, lined up and exposure-matched (`client/src/features/studio/lib/composite.ts`), so everything else stays the original pixels. Changes stack with Undo and Try again. Removed: options A–D, lighting moods, staging add-ons, notes, sample photos, shutter designs and the CV-render mode.
 - [x] **Two modes + Final 2K (23 Nov 2026).** The user asked for both ways of working, so staff can pick: **Mark & edit** (after marking, the part's suggested changes show as clickable prompts; custom finish and own words also work) and **Standard** (the earlier spec editor with options A–D, moods, add-ons, samples, notes, CV render). Both stack into one list of changes with Undo / Try again. **Final 2K image**: one realism pass over the whole image with xAI `resolution: "2k"` (same $0.04 per image; returned 2912×1456 PNG, ~26 s), lined up and cut to the photo's shape in the browser, shown beside the edited image before download.
 - [x] **Prompt bars with AI help (23 Nov 2026).** Every customise option has a prompt bar for details in staff's own words (Custom finish and each Standard part → `Selection.details`; own-words change; designer's note). **AI help** calls a text model (`grok-4.20-0309-non-reasoning`, `XAI_TEXT_MODEL`; ~1 s, ~$0.001) via `POST /api/assist` and returns three clear English options; it understands Tamil / Tanglish (tested: "konjam fluted design venum, top la gold line podunga"). Empty bar = ideas for that part and finish. Mock mode answers with built-in suggestions.
 - [x] **Item from a photo (23 Nov 2026).** Staff asked to put a sofa from another photo into the room; the studio could only send the room photo, so the AI never saw the sofa. Mark & edit now takes an **Item photo** (attach, drop, or paste while an area is marked): both photos go to xAI as a multi-image edit (`<IMAGE_0>` room, `<IMAGE_1>` item) and only the marked area is pasted back. Not yet tried with a real sofa photo.

@@ -12,7 +12,8 @@
     "skipLibCheck": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "paths": { "@shared/*": ["../shared/*"] }
   },
   "include": ["src", "../shared", "vite.config.ts"]
 }
