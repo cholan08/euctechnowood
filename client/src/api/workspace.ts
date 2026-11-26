@@ -7,6 +7,7 @@ import type {
   NewStaffRequest,
   Project,
   ProjectInput,
+  ProjectStats,
   ProjectSummary,
   Room,
   RoomDetail,
@@ -49,8 +50,9 @@ export const clients = {
 };
 
 export const projects = {
-  list: (filter: { q?: string; status?: string; mine?: boolean; clientId?: string } = {}) =>
-    getJson<ProjectSummary[]>(`/api/projects${query({ q: filter.q, status: filter.status, mine: filter.mine && '1', clientId: filter.clientId })}`),
+  list: (filter: { q?: string; status?: string; mine?: boolean; clientId?: string; sort?: string } = {}) =>
+    getJson<ProjectSummary[]>(`/api/projects${query({ q: filter.q, status: filter.status, mine: filter.mine && '1', clientId: filter.clientId, sort: filter.sort })}`),
+  stats: () => getJson<ProjectStats>('/api/projects/stats'),
   get: (id: string) => getJson<Project>(`/api/projects/${id}`),
   add: (body: ProjectInput) => postJson<Project>('/api/projects', body),
   update: (id: string, body: UpdateProjectRequest) => patchJson<Project>(`/api/projects/${id}`, body),

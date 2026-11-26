@@ -17,6 +17,7 @@ import {
   listDesigns,
   listImages,
   listProjects,
+  projectStats,
   requireProject,
   requireRoom,
   toImage,
@@ -184,7 +185,11 @@ export function workspaceRoutes({ db, images }: Deps): Router {
 
   router.get('/projects', (req, res) => {
     const q = (k: string) => (typeof req.query[k] === 'string' ? (req.query[k] as string).slice(0, 80) : undefined);
-    res.json(listProjects(db, { clientId: q('clientId'), status: q('status'), q: q('q'), mine: q('mine') === '1' ? userOf(req).id : undefined }));
+    res.json(listProjects(db, { clientId: q('clientId'), status: q('status'), q: q('q'), mine: q('mine') === '1' ? userOf(req).id : undefined, sort: q('sort') }));
+  });
+
+  router.get('/projects/stats', (req, res) => {
+    res.json(projectStats(db, userOf(req).id));
   });
 
   router.post('/projects', editors, (req, res) => {

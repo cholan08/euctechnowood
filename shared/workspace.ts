@@ -114,10 +114,44 @@ export interface ProjectSummary {
   ownerId: string | null;
   ownerName: string | null;
   roomCount: number;
+  /** Designs staff kept across all rooms. */
+  designCount: number;
+  /** Rooms with at least one kept design. */
+  designedRoomCount: number;
+  /** Room names, oldest first. */
+  roomNames: string[];
+  /** Everyone added to the project besides the owner. */
+  memberNames: string[];
   /** An image id for the card thumbnail. */
   coverImageId: string | null;
   updatedAt: string;
 }
+
+/** A presented project with no activity for this many days needs a follow-up with the client. */
+export const FOLLOW_UP_DAYS = 7;
+
+/** Headline numbers for the Projects page. */
+export interface ProjectStats {
+  /** Projects per status. */
+  byStatus: Record<ProjectStatus, number>;
+  /** Everything not archived. */
+  open: number;
+  /** Projects the signed-in person owns or was added to. */
+  mine: number;
+  /** Presented projects quiet for FOLLOW_UP_DAYS or more. */
+  followUp: number;
+  rooms: number;
+  designs: number;
+}
+
+export type ProjectSort = 'recent' | 'stale' | 'name' | 'client';
+
+export const PROJECT_SORTS: { id: ProjectSort; label: string }[] = [
+  { id: 'recent', label: 'Recently updated' },
+  { id: 'stale', label: 'Least recently updated' },
+  { id: 'name', label: 'Project name' },
+  { id: 'client', label: 'Client name' },
+];
 
 export interface Project extends ProjectSummary {
   notes: string;

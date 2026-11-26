@@ -1,5 +1,6 @@
 import type { RoomTypeId } from '@shared/catalog';
-import type { Access, Client, ImageKind, Project, ProjectMember, ProjectStatus, ProjectSummary, Room, SavedDesign, StoredImage } from '@shared/workspace';
+import { FOLLOW_UP_DAYS } from '@shared/workspace';
+import type { Access, Client, ImageKind, Project, ProjectMember, ProjectStats, ProjectStatus, ProjectSummary, Room, SavedDesign, StoredImage } from '@shared/workspace';
 import type { Db } from '../../db/database';
 import { AppError } from '../../lib/errors';
 import type { SessionUser } from '../../http/auth';
@@ -96,6 +97,10 @@ interface ProjectRow {
   owner_id: string | null;
   owner_name: string | null;
   room_count: number;
+  design_count: number;
+  designed_room_count: number;
+  room_names: string | null;
+  member_names: string | null;
   cover_image_id: string | null;
   created_at: string;
   updated_at: string;
@@ -104,8 +109,15 @@ interface ProjectRow {
 const PROJECT_SELECT = `
   SELECT p.*, c.name AS client_name, u.name AS owner_name,
          (SELECT COUNT(*) FROM rooms r WHERE r.project_id = p.id) AS room_count,
+         (SELECT COUNT(*) FROM designs d JOIN rooms r ON r.id = d.room_id WHERE r.project_id = p.id) AS design_count,
+         (SELECT COUNT(*) FROM rooms r WHERE r.project_id = p.id AND EXISTS (SELECT 1 FROM designs d WHERE d.room_id = r.id)) AS designed_room_count,
+         (SELECT GROUP_CONCAT(name, char(31)) FROM (SELECT r.name FROM rooms r WHERE r.project_id = p.id ORDER BY r.created_at)) AS room_names,
+         (SELECT GROUP_CONCAT(name, char(31)) FROM (SELECT mu.name FROM project_members m JOIN users mu ON mu.id = m.user_id WHERE m.project_id = p.id AND m.user_id IS NOT p.owner_id ORDER BY mu.name)) AS member_names,
          (SELECT COALESCE(r.cover_image_id, r.original_image_id) FROM rooms r WHERE r.project_id = p.id ORDER BY r.updated_at DESC LIMIT 1) AS cover_image_id
     FROM projects p JOIN clients c ON c.id = p.client_id LEFT JOIN users u ON u.id = p.owner_id`;
+
+/** GROUP_CONCAT joins with the unit separator, which no name contains. */
+const splitList = (s: string | null): string[] => (s ? s.split('\u001f') : []);
 
 const toSummary = (r: ProjectRow): ProjectSummary => ({
   id: r.id,
@@ -116,11 +128,39 @@ const toSummary = (r: ProjectRow): ProjectSummary => ({
   ownerId: r.owner_id,
   ownerName: r.owner_name,
   roomCount: r.room_count,
+  designCount: r.design_count,
+  designedRoomCount: r.designed_room_count,
+  roomNames: splitList(r.room_names),
+  memberNames: splitList(r.member_names),
   coverImageId: r.cover_image_id,
   updatedAt: r.updated_at,
 });
 
-export function listProjects(db: Db, filter: { clientId?: string; status?: string; q?: string; mine?: string }): ProjectSummary[] {
+const PROJECT_ORDER: Record<string, string> = {
+  recent: 'p.updated_at DESC',
+  stale: 'p.updated_at ASC',
+  name: 'p.name COLLATE NOCASE ASC, p.updated_at DESC',
+  client: 'c.name COLLATE NOCASE ASC, p.name COLLATE NOCASE ASC',
+};
+
+/** The time before which a presented project counts as quiet. */
+const followUpCutoff = () => new Date(Date.now() - FOLLOW_UP_DAYS * 86_400_000).toISOString();
+
+export function projectStats(db: Db, userId: string): ProjectStats {
+  const byStatus: Record<ProjectStatus, number> = { active: 0, presented: 0, approved: 0, archived: 0 };
+  for (const r of db.all<{ status: ProjectStatus; n: number }>('SELECT status, COUNT(*) AS n FROM projects GROUP BY status')) byStatus[r.status] = r.n;
+  const count = (sql: string, ...params: string[]) => db.get<{ n: number }>(sql, ...params)?.n ?? 0;
+  return {
+    byStatus,
+    open: byStatus.active + byStatus.presented + byStatus.approved,
+    mine: count('SELECT COUNT(*) AS n FROM projects p WHERE p.owner_id = ? OR EXISTS (SELECT 1 FROM project_members m WHERE m.project_id = p.id AND m.user_id = ?)', userId, userId),
+    followUp: count("SELECT COUNT(*) AS n FROM projects WHERE status = 'presented' AND updated_at < ?", followUpCutoff()),
+    rooms: count('SELECT COUNT(*) AS n FROM rooms'),
+    designs: count('SELECT COUNT(*) AS n FROM designs'),
+  };
+}
+
+export function listProjects(db: Db, filter: { clientId?: string; status?: string; q?: string; mine?: string; sort?: string }): ProjectSummary[] {
   const where: string[] = [];
   const params: string[] = [];
   if (filter.clientId) {
@@ -128,20 +168,23 @@ export function listProjects(db: Db, filter: { clientId?: string; status?: strin
     params.push(filter.clientId);
   }
   if (filter.status === 'open') where.push("p.status != 'archived'");
-  else if (filter.status) {
+  else if (filter.status === 'followup') {
+    where.push("p.status = 'presented' AND p.updated_at < ?");
+    params.push(followUpCutoff());
+  } else if (filter.status) {
     where.push('p.status = ?');
     params.push(filter.status);
   }
   if (filter.q) {
     const like = `%${filter.q.replace(/[%_]/g, '')}%`;
-    where.push('(p.name LIKE ? OR c.name LIKE ?)');
-    params.push(like, like);
+    where.push('(p.name LIKE ? OR c.name LIKE ? OR EXISTS (SELECT 1 FROM rooms r WHERE r.project_id = p.id AND r.name LIKE ?))');
+    params.push(like, like, like);
   }
   if (filter.mine) {
     where.push('(p.owner_id = ? OR EXISTS (SELECT 1 FROM project_members m WHERE m.project_id = p.id AND m.user_id = ?))');
     params.push(filter.mine, filter.mine);
   }
-  const sql = `${PROJECT_SELECT} ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY p.updated_at DESC LIMIT 500`;
+  const sql = `${PROJECT_SELECT} ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY ${PROJECT_ORDER[filter.sort ?? ''] ?? PROJECT_ORDER.recent} LIMIT 500`;
   return db.all<ProjectRow>(sql, ...params).map(toSummary);
 }
 

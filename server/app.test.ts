@@ -319,6 +319,27 @@ describe('clients, projects, rooms, image history and saved designs', () => {
     expect(mine.every((p: { name: string }) => p.name === 'Anna Nagar flat')).toBe(true);
   });
 
+  it('sorts projects and reports headline stats', async () => {
+    const dev = await t.as('designer');
+    const names = (await dev.get('/projects?sort=name')).json.map((p: { name: string }) => p.name);
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })));
+    expect((await dev.get('/projects?sort=bogus')).status).toBe(200);
+    const s = (await dev.get('/projects/stats')).json;
+    expect(s.open).toBe(s.byStatus.active + s.byStatus.presented + s.byStatus.approved);
+    expect(s.rooms).toBeGreaterThan(0);
+    expect(s.mine).toBeGreaterThan(0);
+    expect(s.followUp).toBe(0);
+    expect((await dev.get('/projects?status=followup')).json).toEqual([]);
+  });
+
+  it('lists room names, designed rooms and team on each project, and searches room names', async () => {
+    const dev = await t.as('designer');
+    const [p] = (await dev.get('/projects?q=kitchen')).json;
+    expect(p).toMatchObject({ name: 'Anna Nagar flat', roomNames: ['Kitchen'] });
+    expect(p.designedRoomCount).toBeLessThanOrEqual(p.roomCount);
+    expect(Array.isArray(p.memberNames)).toBe(true);
+  });
+
   it('deleting a project deletes its rooms, history and files; only admins delete clients', async () => {
     const { dev, client, project } = await setup();
     const files = t.images.size();

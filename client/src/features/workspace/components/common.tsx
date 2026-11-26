@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { PROJECT_STATUSES, imageUrl, type ProjectStatus, type ProjectSummary } from '@shared/workspace';
 import { Icon } from '../../../components/ui/Icon';
+import { STEPS, initials, progressOf, roomsLine } from '../model/progress';
 
 export const statusLabel = (s: ProjectStatus) => PROJECT_STATUSES.find((p) => p.id === s)?.label ?? s;
 
@@ -25,6 +26,40 @@ export function ago(iso: string): string {
 
 export const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
+/** Four thin segments, one per step; the label says what is next. */
+export function ProgressBar({ p }: { p: ProjectSummary }) {
+  const pr = progressOf(p);
+  return (
+    <div className={`progress tone-${pr.tone}`}>
+      <span className="progress-track" role="img" aria-label={`${pr.done} of ${STEPS.length} steps done: ${STEPS.slice(0, pr.done).join(', ') || 'none'}`}>
+        {STEPS.map((step, i) => (
+          <i key={step} className={i < pr.done ? 'on' : ''} title={step} />
+        ))}
+      </span>
+      <span className="progress-next">{pr.next}</span>
+    </div>
+  );
+}
+
+/** Owner first, then members; three faces at most. */
+export function Team({ owner, members }: { owner: string | null; members: string[] }) {
+  const names = [...(owner ? [owner] : []), ...members];
+  if (!names.length) return <span className="team-none">No one yet</span>;
+  const shown = names.slice(0, 3);
+  return (
+    <span className="team" title={names.join(', ')}>
+      {shown.map((n, i) => (
+        <span key={`${n}-${i}`} className={`face${i === 0 && owner ? ' face-owner' : ''}`}>
+          {initials(n)}
+        </span>
+      ))}
+      {names.length > shown.length && <span className="face face-more">+{names.length - shown.length}</span>}
+    </span>
+  );
+}
+
+const exactDate = (iso: string) => new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+
 export function ProjectCard({ p }: { p: ProjectSummary }) {
   return (
     <Link to={`/projects/${p.id}`} className="card project-card">
@@ -34,11 +69,43 @@ export function ProjectCard({ p }: { p: ProjectSummary }) {
       </div>
       <div className="card-body">
         <strong>{p.name}</strong>
-        <span>{p.clientName}</span>
-        <span className="card-meta">
-          {plural(p.roomCount, 'room')} · {p.ownerName ?? 'No owner'} · {ago(p.updatedAt)}
+        <span>
+          {p.clientName} · {roomsLine(p.roomNames)}
+        </span>
+        <ProgressBar p={p} />
+        <span className="card-foot">
+          <Team owner={p.ownerName} members={p.memberNames} />
+          <time dateTime={p.updatedAt} title={exactDate(p.updatedAt)}>
+            {ago(p.updatedAt)}
+          </time>
         </span>
       </div>
+    </Link>
+  );
+}
+
+/** One project as a row: the whole row is the link. */
+export function ProjectRow({ p }: { p: ProjectSummary }) {
+  return (
+    <Link to={`/projects/${p.id}`} className="project-row">
+      <span className="row-thumb">{p.coverImageId ? <img src={imageUrl(p.coverImageId)} alt="" loading="lazy" /> : <Icon name="photo" size={16} />}</span>
+      <span className="row-main">
+        <strong>{p.name}</strong>
+        <span>
+          {p.clientName} · {roomsLine(p.roomNames, 3)}
+          {p.designCount > 0 && ` · ${plural(p.designCount, 'design')}`}
+        </span>
+      </span>
+      <span className="row-stage">
+        <StatusChip status={p.status} />
+        <ProgressBar p={p} />
+      </span>
+      <span className="row-team">
+        <Team owner={p.ownerName} members={p.memberNames} />
+      </span>
+      <time className="row-time" dateTime={p.updatedAt} title={exactDate(p.updatedAt)}>
+        {ago(p.updatedAt)}
+      </time>
     </Link>
   );
 }
