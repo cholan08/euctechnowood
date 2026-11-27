@@ -112,6 +112,19 @@ types) and `workspace.ts` (accounts, clients, projects, rooms, images: API shape
 
 ## Deployment today
 
-One Render web service (`render.yaml`) builds the client and runs `npm start`, so a single Node process serves both
-`client/dist` and the API at https://euc.xenoware.in. Studio data lives in `DATA_DIR`, which must be a persistent disk
-(`/var/data`) in production.
+One Railway service (project `euc-room-studio`, Hobby plan, Singapore) builds the client and runs `npm start`, so a
+single Node process serves both `client/dist` and the API at https://euc.xenoware.in. It deploys on every push to
+`main` that touches `server/`, `shared/`, `client/` or the package files. Its settings live in the Railway dashboard:
+
+| Setting | Value |
+| --- | --- |
+| Source | GitHub `cholan08/euctechnowood`, branch `main`; Railpack builder, Node 22 (from `engines`) |
+| Build | `npm install --include=dev && npm run build` (tsx is a devDependency used at runtime; `npm ci` fails on Railpack's cache mount) |
+| Start / health | `npm start`, health check `/api/health`, restart on failure |
+| Region / replicas | `asia-southeast1-eqsg3a`, 1 replica (SQLite on one volume cannot be shared) |
+| Volume | 5 GB at `/data` |
+| Variables | `NODE_ENV=production`, `PORT=8080`, `TRUST_PROXY=1`, `DATA_DIR=/data`, `IMAGE_PROVIDER=xai`, `ADMIN_NAME`; secrets `XAI_API_KEY`, and `ADMIN_EMAIL` / `ADMIN_PASSWORD` only until the first admin exists |
+| Domains | `euc.xenoware.in` (Cloudflare CNAME, DNS only, plus the `_railway-verify.euc` TXT record) and `euc-room-studio-production.up.railway.app` |
+| Spending | Workspace usage alert at $7, hard limit at $15 |
+
+Studio data lives in `DATA_DIR`, which must be the persistent volume in production.

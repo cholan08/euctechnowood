@@ -31,7 +31,7 @@ export interface Config {
   image: ImageProviderConfig;
   /** The text model behind "AI help". Null in mock mode: the server answers with built-in suggestions. */
   text: TextProviderConfig | null;
-  /** Where the database file and stored images live (a Docker volume or Render disk in production). */
+  /** Where the database file and stored images live (the Railway volume at /data in production). */
   dataDir: string;
   /** A session ends after this long without a request. */
   sessionIdleHours: number;
