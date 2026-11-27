@@ -41,14 +41,22 @@ export function createApp({ config, providers, db, images }: AppDeps): express.E
   const usage = createUsageService(db, { defaultLimit: config.dailyImageLimit });
 
   const app = express();
-  if (config.trustProxy) app.set('trust proxy', 1); // behind Caddy / Nginx / Render
+  if (config.trustProxy) app.set('trust proxy', 1); // behind Railway's edge (or Caddy / Nginx)
   app.disable('x-powered-by');
+  // API answers are private and change often: never cache them, and send no ETag, so the
+  // browser never gets an empty 304 (it cannot reuse a cached copy, e.g. while the site's
+  // certificate is not yet valid). Image responses set their own long cache.
+  app.set('etag', false);
 
   // Room photos arrive as base64 JSON; the browser shrinks them to 1536px first.
   // Stored Final 2K images are the largest, at a few MB.
   app.use(express.json({ limit: '20mb' }));
   app.use(securityHeaders);
   // Who is asking, on every API request. Each module decides what needs a signed-in user.
+  app.use('/api', (_req, res, next) => {
+    res.setHeader('cache-control', 'no-store');
+    next();
+  });
   app.use('/api', authenticate(auth));
 
   app.use('/api', healthRoutes({ provider: studio.provider }));

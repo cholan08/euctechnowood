@@ -20,6 +20,9 @@ describe('studio API with the mock provider', () => {
     expect(r.json).toEqual({ ok: true, provider: 'mock' });
     expect(r.headers.get('x-content-type-options')).toBe('nosniff');
     expect(r.headers.get('x-frame-options')).toBe('DENY');
+    // Never cached and no ETag, so the browser can never be handed an empty 304.
+    expect(r.headers.get('cache-control')).toBe('no-store');
+    expect(r.headers.get('etag')).toBeNull();
   });
 
   it('refuses the studio to anyone not signed in', async () => {
