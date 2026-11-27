@@ -4,6 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Dream Studios: AI interior design studio for EUC Technowood staff (clients, projects, generation, editing, presentation boards).",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "concurrently -k -n api,web -c cyan,magenta \"npm:dev:api\" \"npm:dev:web\"",
     "dev:api": "tsx watch --tsconfig server/tsconfig.json server/index.ts",
